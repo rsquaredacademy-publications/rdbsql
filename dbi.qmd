@@ -30,7 +30,7 @@ We will use the following R packages:
 - [DBI](https://dbi.r-dbi.org/)
 - [RSQLite](https://rsqlite.r-dbi.org/)
 
-All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/rsquaredacademy/7d99eb52a0e44cd1f87c8689cf1a307d) or run from `code/ch1-dbi.R` in this repo.
+All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/aravindhebbali/7d99eb52a0e44cd1f87c8689cf1a307d) or run from `code/ch1-dbi.R` in this repo.
 
 ## Connection
 

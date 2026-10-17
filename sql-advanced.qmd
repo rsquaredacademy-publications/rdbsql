@@ -20,7 +20,7 @@ library(DBI)
 library(RSQLite)
 ```
 
-All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/rsquaredacademy/691dba8e13873c648bfdb91aba65d4d7) or run from `code/ch4-sqladvanced.R` in this repo.
+All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/aravindhebbali/691dba8e13873c648bfdb91aba65d4d7) or run from `code/ch4-sqladvanced.R` in this repo.
 
 ## Set Up
 

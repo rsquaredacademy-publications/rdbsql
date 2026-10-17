@@ -18,5 +18,6 @@ jobs:
       - name: Check links in built site
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --verbose --no-progress './docs/**/*.html' --exclude 'mailto:*'
+          # reddit.com, stackoverflow.com and community.posit.co answer 403 to bots, so their failures are not real 404s.
+          args: --verbose --no-progress --root-dir '${{ github.workspace }}/docs' './docs/**/*.html' --exclude 'mailto:' --exclude 'reddit\.com' --exclude 'stackoverflow\.com' --exclude 'community\.posit\.co'
           fail: true
