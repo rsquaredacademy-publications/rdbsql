@@ -111,15 +111,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<!-- Google tag (gtag.js) -->
-<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-6CP8KYZN41"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-6CP8KYZN41');
-</script>
+<!-- Rsquared site-kit v1.0.1: GA4 + region-based consent. Kit files are vendored in site-kit/. -->
+<link rel="stylesheet" href="./site-kit/rsa-consent.css">
+<script src="./site-kit/rsa-analytics.js" data-ga-id="G-2QSPEL5WM6" async=""></script>
 
 
 <link rel="stylesheet" href="style.css">
@@ -337,7 +331,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><a href="https://dbi.r-dbi.org/">DBI</a></li>
 <li><a href="https://rsqlite.r-dbi.org/">RSQLite</a></li>
 </ul>
-<p>All the data sets used in this chapter can be found <a href="https://github.com/rsquaredacademy/datasets">here</a> and code can be downloaded from <a href="https://gist.github.com/rsquaredacademy/7d99eb52a0e44cd1f87c8689cf1a307d">here</a> or run from <code>code/ch1-dbi.R</code> in this repo.</p>
+<p>All the data sets used in this chapter can be found <a href="https://github.com/rsquaredacademy/datasets">here</a> and code can be downloaded from <a href="https://gist.github.com/aravindhebbali/7d99eb52a0e44cd1f87c8689cf1a307d">here</a> or run from <code>code/ch1-dbi.R</code> in this repo.</p>
 </section>
 <section id="connection" class="level2" data-number="1.2">
 <h2 data-number="1.2" class="anchored" data-anchor-id="connection"><span class="header-section-number">1.2</span> Connection</h2>
@@ -623,11 +617,11 @@ $has.completed
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, <span class="st">"select * from trial limit 5"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   x y
-1 48 k
-2 66 l
-3 44 m
-4 72 n
-5 56 o</code></pre>
+1 68 k
+2 74 l
+3 32 m
+4 75 n
+5 16 o</code></pre>
 </div>
 </div>
 </section>
@@ -646,26 +640,26 @@ $has.completed
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dbReadTable</span>(con, <span class="st">"trial"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    x y
-1  48 k
-2  66 l
-3  44 m
-4  72 n
-5  56 o
-6  68 p
-7  18 q
-8  69 r
-9  20 s
-10 55 t
-11 90 e
-12 75 f
-13 33 g
-14 67 h
-15 36 i
-16 15 j
-17 19 k
-18 32 l
-19 71 m
-20 37 n</code></pre>
+1  68 k
+2  74 l
+3  32 m
+4  75 n
+5  16 o
+6  29 p
+7  56 q
+8  25 r
+9  38 s
+10 30 t
+11 61 e
+12 91 f
+13 39 g
+14 73 h
+15 82 i
+16 10 j
+17 23 k
+18 36 l
+19 75 m
+20 96 n</code></pre>
 </div>
 </div>
 <p>We can also use <code>sqlAppendTable()</code> to append data to an existing table.</p>
@@ -1162,6 +1156,19 @@ VALUES
   </div>
 </nav>
 </div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>We use Google Analytics 4 to understand how people use this site (pages visited, referring sites, device type and approximate location) so we can improve our free learning material. Google Analytics uses cookies and a pseudonymous identifier; we don’t use it for advertising and we never send Google names or email addresses. Visitors in the European Economic Area, the United Kingdom and Switzerland are asked for consent first, and if they decline, no analytics cookies are stored. Anyone can switch analytics off at any time: <a href="#" data-rsa-analytics-optout="">Turn off analytics</a>.</p>
+</div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
 
 
 
