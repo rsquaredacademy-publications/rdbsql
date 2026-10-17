@@ -111,9 +111,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<!-- Rsquared site-kit v1.0.1: GA4 + region-based consent. Kit files are vendored in site-kit/. -->
+<!-- Rsquared site-kit v1.2.0: GA4 + region-based consent + email sign-up. Kit files are vendored in site-kit/. -->
 <link rel="stylesheet" href="./site-kit/rsa-consent.css">
 <script src="./site-kit/rsa-analytics.js" data-ga-id="G-2QSPEL5WM6" async=""></script>
+<link rel="stylesheet" href="./site-kit/rsa-signup.css">
+<script src="./site-kit/rsa-signup.js" defer=""></script>
 
 
 <link rel="stylesheet" href="style.css">
@@ -617,11 +619,11 @@ $has.completed
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(con, <span class="st">"select * from trial limit 5"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   x y
-1 68 k
-2 74 l
-3 32 m
-4 75 n
-5 16 o</code></pre>
+1  7 k
+2 27 l
+3 62 m
+4  5 n
+5 30 o</code></pre>
 </div>
 </div>
 </section>
@@ -640,26 +642,26 @@ $has.completed
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dbReadTable</span>(con, <span class="st">"trial"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    x y
-1  68 k
-2  74 l
-3  32 m
-4  75 n
-5  16 o
+1   7 k
+2  27 l
+3  62 m
+4   5 n
+5  30 o
 6  29 p
-7  56 q
-8  25 r
-9  38 s
-10 30 t
-11 61 e
-12 91 f
-13 39 g
-14 73 h
-15 82 i
-16 10 j
-17 23 k
-18 36 l
-19 75 m
-20 96 n</code></pre>
+7  12 q
+8  70 r
+9  21 s
+10 48 t
+11 51 e
+12 45 f
+13 87 g
+14 76 h
+15 11 i
+16  8 j
+17 79 k
+18 47 l
+19 99 m
+20 89 n</code></pre>
 </div>
 </div>
 <p>We can also use <code>sqlAppendTable()</code> to append data to an existing table.</p>
@@ -740,6 +742,7 @@ VALUES
 </div>
 
 
+<div data-rsa-signup="" data-site="rdbsql.rsquaredacademy.com" data-privacy-url="https://www.rsquaredacademy.com/privacy-policy.html"></div>
 </section>
 
 </main> <!-- /main -->
@@ -1163,6 +1166,7 @@ VALUES
     </div>   
     <div class="nav-footer-center">
 <p>We use Google Analytics 4 to understand how people use this site (pages visited, referring sites, device type and approximate location) so we can improve our free learning material. Google Analytics uses cookies and a pseudonymous identifier; we don’t use it for advertising and we never send Google names or email addresses. Visitors in the European Economic Area, the United Kingdom and Switzerland are asked for consent first, and if they decline, no analytics cookies are stored. Anyone can switch analytics off at any time: <a href="#" data-rsa-analytics-optout="">Turn off analytics</a>.</p>
+<p>Sites that show the newsletter sign-up form use Zoho Campaigns to send updates. If you sign up, we collect your email address, an optional first name, and which site you signed up on, and we use them only to send you updates. Sign-up uses double opt-in, so you must confirm by email before you are added; every email includes an unsubscribe link, and we never sell or share the list.</p>
 </div>
     <div class="nav-footer-right">
       &nbsp;
