@@ -52,6 +52,11 @@ jobs:
       - name: Render HTML
         run: quarto render --to html --output-dir /tmp/stage-html
 
+      # Quarto re-copies resources found in the committed docs/ into <output>/docs/;
+      # they are not real pages and must not reach the sitemap or the site.
+      - name: Drop re-copied docs/ from the staged output
+        run: rm -rf /tmp/stage-html/docs
+
       # Generated from the rendered pages. The hand-maintained sitemap this
       # replaces omitted cheatsheet.html, production.html and duckdb.html --
       # all three are live pages, they were simply missing from the sitemap.

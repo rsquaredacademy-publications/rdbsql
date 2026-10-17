@@ -18,7 +18,7 @@ library(DBI)
 library(RSQLite)
 ```
 
-All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/rsquaredacademy/f5ee72cee9ab3256230cdedecd3ef25b) or run from `code/ch2-dbplyr.R` in this repo.
+All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/aravindhebbali/f5ee72cee9ab3256230cdedecd3ef25b) or run from `code/ch2-dbplyr.R` in this repo.
 
 ## Connect to Database
 

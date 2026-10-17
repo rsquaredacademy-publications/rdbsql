@@ -36,7 +36,7 @@ library(DBI)
 library(RSQLite)
 ```
 
-All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/rsquaredacademy/f44774d9c6e115c08d5e2e693380a00f) or run from `code/ch3-sqlbasics.R` in this repo.
+All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/aravindhebbali/f44774d9c6e115c08d5e2e693380a00f) or run from `code/ch3-sqlbasics.R` in this repo.
 
 ## Set Up
 

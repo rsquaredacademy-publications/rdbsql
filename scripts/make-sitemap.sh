@@ -23,6 +23,7 @@ SITE_URL="${2:-https://example.com}"
       | sed 's|^\./||' \
       | grep -v '^404\.html$' \
       | grep -v '^google.*\.html$' \
+      | grep -v '^docs/' \
       | sort ) \
   | while read -r page; do
       echo "  <url><loc>${SITE_URL}/${page}</loc></url>"
