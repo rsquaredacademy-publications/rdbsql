@@ -20,6 +20,20 @@ book:
   author: "Aravind Hebbali"
   date: last-modified
   description: "R DBI tutorial: connect R to SQLite, query with dbplyr and SQL — free 2-hour primer before R4DS."
+  # Social metadata lives under `book:`, not `website:`, in a book project
+  # (https://quarto.org/docs/websites/website-tools.html#social-metadata).
+  site-url: https://rdbsql.rsquaredacademy.com
+  repo-url: https://github.com/rsquaredacademy-publications/rdbsql/
+  image: img/social-card.png
+  open-graph:
+    site-name: Rsquared Academy
+  twitter-card:
+    card-style: summary_large_image
+    site: "@rsquaredacademy"
+  navbar:
+    right:
+      - text: "GitHub"
+        href: https://github.com/rsquaredacademy-publications/rdbsql/
   chapters:
     - index.qmd
     - about.qmd
@@ -42,17 +56,6 @@ book:
       We use Google Analytics 4 to understand how people use this site (pages visited, referring sites, device type and approximate location) so we can improve our free learning material. Google Analytics uses cookies and a pseudonymous identifier; we don't use it for advertising and we never send Google names or email addresses. Visitors in the European Economic Area, the United Kingdom and Switzerland are asked for consent first, and if they decline, no analytics cookies are stored. Anyone can switch analytics off at any time: <a href="#" data-rsa-analytics-optout>Turn off analytics</a>.
 
       Sites that show the newsletter sign-up form use Zoho Campaigns to send updates. If you sign up, we collect your email address, an optional first name, and which site you signed up on, and we use them only to send you updates. Sign-up uses double opt-in, so you must confirm by email before you are added; every email includes an unsubscribe link, and we never sell or share the list.
-
-website:
-  site-url: https://rdbsql.rsquaredacademy.com
-  repo-url: https://github.com/rsquaredacademy-publications/rdbsql/
-  description: "R DBI tutorial: connect R to SQLite, query with dbplyr and SQL — free 2-hour primer before R4DS."
-  open-graph: true
-  twitter-card: true
-  navbar:
-    right:
-      - text: "GitHub"
-        href: https://github.com/rsquaredacademy-publications/rdbsql/
 
 format:
   html:

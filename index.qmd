@@ -1,3 +1,8 @@
+---
+image: img/social-card.png
+image-alt: "R, Databases & SQL — connect R to SQLite, query with dbplyr and SQL"
+---
+
 # Preface {.unnumbered}
 
 *Last verified: 2026-09-26 · R 4.5.2 · DBI · dbplyr 2.6.0 · RSQLite 2.4.6 · duckdb.*
