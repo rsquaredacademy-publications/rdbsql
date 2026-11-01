@@ -66,7 +66,7 @@ title_top <- H - M - 30                    # top line of the title
 line3_top <- title_top - 2 * line_gap      # "& SQL"
 subtitle_top <- line3_top - title_px - 30
 primer_top <- subtitle_top - subtitle_px - 24
-lines <- c("R,", "Databases", "& SQL")
+lines <- c("R, Databases", "& SQL", "")
 
 p <- ggplot() +
   coord_cartesian(xlim = c(0, W), ylim = c(0, H), expand = FALSE) +
