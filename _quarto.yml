@@ -41,11 +41,11 @@ book:
       chapters:
         - sql-intro.qmd
         - sql-basics.qmd
-        # Chapter 3: Calculated columns and SQLite types (planned)
+        - sql-calculated.qmd
         - sql-advanced.qmd
-        # Chapter 5: NULL and three-valued logic (planned)
+        - sql-null.qmd
         - joins.qmd
-        # Chapter 7: Where SQL goes next (planned)
+        - sql-next.qmd
     - part: "Part II: SQL from R"
       chapters:
         - dbi.qmd

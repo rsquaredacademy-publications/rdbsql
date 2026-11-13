@@ -25,13 +25,12 @@ This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAl
 **Part I: SQL** is the SQL-first companion to the free
 [Intro to SQL course]({{< var sql_course_url >}}). We start with databases,
 tables and queries in @sec-sql-intro. We select, sort and filter rows in
-@sec-sqlbasics, summarise groups in @sec-sql2, and combine tables in @sec-joins.
+@sec-sqlbasics, calculate columns and explore SQLite types in
+@sec-sql-calculated, and summarize groups in @sec-sql2. We work with
+missing values in @sec-sql-null and combine tables in @sec-joins.
+@sec-sql-next previews window functions and common table expressions.
 We use public flight data from **nycflights13**. The SQL examples run directly
 against SQLite, and the book shows their results.
-
-The full Part I outline reserves chapters 3, 5 and 7 for calculated columns
-and SQLite types, missing values, and where SQL goes next. These chapters
-are planned; the current navigation contains the available chapters only.
 
 **Part II: SQL from R** starts with **DBI** in @sec-dbi and **dbplyr** in
 @sec-dbplyr, including joins with dplyr verbs. The production and DuckDB

@@ -597,8 +597,7 @@ aircraft match survive. `LIMIT` previews six of those departures.
 - Test a nonmissing right-hand key to find rows without a match.
 - Apply right-table filters carefully: `WHERE` can remove retained rows.
 
-Next: Where SQL goes next (planned chapter 7).
-For the next available material, continue to [SQL from R with DBI](dbi.qmd).
+Next: [Where SQL goes next](sql-next.qmd).
 
 Practise in [Intro to SQL, lessons 9–10]({{< var sql_course_url >}}).
 

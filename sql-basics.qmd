@@ -637,8 +637,7 @@ ORDER BY name, carrier;
 - Brackets make combined conditions clear; `AND` binds before `OR`.
 - `IN`, inclusive `BETWEEN` and wildcard `LIKE` express common filters.
 
-Next: calculated columns and SQLite types (planned chapter 3).
-The next available chapter is [Summaries and groups](sql-advanced.qmd).
+Next: [Calculated columns and SQLite types](sql-calculated.qmd).
 
 Practise in [Intro to SQL, lessons 1–4]({{< var sql_course_url >}}).
 

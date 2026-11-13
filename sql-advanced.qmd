@@ -610,8 +610,7 @@ departures in each input group.
 - `GROUP BY` defines the summaries; `ORDER BY` defines their display order.
 - `WHERE` filters input rows, and `HAVING` filters completed groups.
 
-Next: NULL and three-valued logic (planned chapter 5).
-The next available chapter is [Joining two tables](joins.qmd).
+Next: [NULL and three-valued logic](sql-null.qmd).
 
 Practise in [Intro to SQL, lessons 6–7]({{< var sql_course_url >}}).
 
