@@ -510,26 +510,25 @@ on `NULL` will explain missing-value filters in full.
 
 ## Common mistakes
 
-::: {.callout-note title="Check the question as well as the syntax"}
-
-- **A missing comma is harmless.** It can silently rename a selected
-  column. Check the result headings and column count.
-- **The default sort is largest first.** Ascending is the default; use
-  `DESC` for the largest delays.
-- **`LIMIT` can precede `ORDER BY`.** Write the sort clause first, then
-  the limit at the end.
-- **Unquoted text or dates are values.** Quote `'JFK'` and `'2013-07-04'`.
-  Otherwise SQLite can interpret names or arithmetic.
-- **Conditions run left to right.** `AND` binds before `OR`. Bracket
-  the airport alternatives before applying the delay condition.
-- **Two alternatives require `AND`.** Use `origin IN ('JFK', 'LGA')`;
-  one origin value cannot equal both codes.
-- **`LIKE 'Air'` finds any name containing Air.** Use `'%Air%'` for a
-  contains pattern.
-- **Reversed range bounds are equivalent.** Put 60 before 120 in
-  `BETWEEN 60 AND 120`.
-
-:::
+> **Check the question as well as the syntax**
+>
+> - **A missing comma is harmless.** It can silently rename a selected
+>   column. Check the result headings and column count.
+> - **The default sort is largest first.** Ascending is the default; use
+>   `DESC` for the largest delays.
+> - **`LIMIT` can precede `ORDER BY`.** Write the sort clause first, then
+>   the limit at the end.
+> - **Unquoted text or dates are values.** Quote `'JFK'` and `'2013-07-04'`.
+>   Otherwise SQLite can interpret names or arithmetic.
+> - **Conditions run left to right.** `AND` binds before `OR`. Bracket
+>   the airport alternatives before applying the delay condition.
+> - **Two alternatives require `AND`.** Use `origin IN ('JFK', 'LGA')`;
+>   one origin value cannot equal both codes.
+> - **`LIKE 'Air'` finds any name containing Air.** Use `'%Air%'` for a
+>   contains pattern.
+> - **Reversed range bounds are equivalent.** Put 60 before 120 in
+>   `BETWEEN 60 AND 120`.
+>
 
 ## Try it {#exercises}
 
