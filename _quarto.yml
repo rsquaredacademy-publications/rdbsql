@@ -37,15 +37,23 @@ book:
   chapters:
     - index.qmd
     - about.qmd
-    - dbi.qmd
-    - dbplyr.qmd
-    - sql-basics.qmd
-    - sql-advanced.qmd
-    - joins.qmd
-    - cheatsheet.qmd
+    - part: "Part I: SQL"
+      chapters:
+        - sql-intro.qmd
+        - sql-basics.qmd
+        - sql-calculated.qmd
+        - sql-advanced.qmd
+        - sql-null.qmd
+        - joins.qmd
+        - sql-next.qmd
+    - part: "Part II: SQL from R"
+      chapters:
+        - dbi.qmd
+        - dbplyr.qmd
+        - production.qmd
+        - duckdb.qmd
   appendices:
-    - production.qmd
-    - duckdb.qmd
+    - cheatsheet.qmd
   downloads: [pdf, epub]
   # Filename for the whole-book PDF/ePub. Must be set here rather than renamed
   # after the render: Quarto bakes this name into the landing page's download

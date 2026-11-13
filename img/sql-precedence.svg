@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 410" role="img" aria-labelledby="title description">
+  <title id="title">AND groups the LGA and delay tests before OR</title>
+  <desc id="description">The JFK test goes directly to OR. The LGA and delay-over-60 tests first combine with AND. OR keeps the row when either input is true.</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#345779" stroke-width="1.5"/></marker></defs>
+  <rect width="1000" height="410" fill="white"/>
+  <g fill="none" stroke="#345779" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M280 75 H570 V165 H640"/>
+    <path d="M280 225 H325 V270 H370"/>
+    <path d="M280 345 H325 V290 H370"/>
+    <path d="M480 280 H600 V195 H640"/>
+    <path d="M730 180 H790"/>
+  </g>
+  <g fill="#eef5fb" stroke="#345779" stroke-width="2">
+    <rect x="20" y="40" width="260" height="70" rx="8"/>
+    <rect x="20" y="190" width="260" height="70" rx="8"/>
+    <rect x="20" y="310" width="260" height="70" rx="8"/>
+    <rect x="370" y="250" width="110" height="60" rx="8"/>
+    <rect x="640" y="150" width="90" height="60" rx="8"/>
+    <rect x="790" y="145" width="190" height="70" rx="8"/>
+  </g>
+  <g font-family="sans-serif" font-size="20" text-anchor="middle" fill="#182d40">
+    <text x="150" y="82">origin = 'JFK'</text>
+    <text x="150" y="232">origin = 'LGA'</text>
+    <text x="150" y="352">dep_delay &gt; 60</text>
+    <text x="425" y="287" font-weight="bold">AND</text>
+    <text x="685" y="187" font-weight="bold">OR</text>
+    <text x="885" y="174">Keep the row</text>
+    <text x="885" y="199">if true</text>
+  </g>
+</svg>

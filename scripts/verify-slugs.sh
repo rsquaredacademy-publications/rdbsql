@@ -9,7 +9,7 @@
 # Usage: sh scripts/verify-slugs.sh <rendered-html-dir>
 #   e.g. sh scripts/verify-slugs.sh /tmp/stage-html
 #
-# Requires yq (preinstalled on GitHub ubuntu runners).
+# Uses yq where available, or Rscript with yaml (already used by Quarto).
 #
 # NO `set -e` HERE, deliberately. Under `set -e` a failing `[ ! -f ]` test
 # aborts the script before the explicit `exit 1` runs, and the shell can report
@@ -24,12 +24,18 @@ if [ ! -f "$YAML" ]; then
   exit 1
 fi
 
-# chapters + appendices, .qmd entries only, minus the .qmd extension.
+# Chapters (including nested parts) + appendices, .qmd entries only.
 # `sed` strips the extension because yq's sub()/rtrimstr() do not behave
 # as expected here; verified against yq 4.5x on the runner image.
-slugs=$(yq eval -r '.book.chapters[]?, .book.appendices[]?' "$YAML" \
-        | grep '\.qmd$' \
-        | sed 's/\.qmd$//')
+if command -v yq >/dev/null 2>&1; then
+  entries=$(yq eval -r '(.book.chapters[]?, .book.appendices[]?) | .. | select(tag == "!!str")' "$YAML") || exit 1
+elif command -v Rscript >/dev/null 2>&1; then
+  entries=$(Rscript -e 'b <- yaml::yaml.load(paste(readLines("_quarto.yml", encoding = "UTF-8"), collapse = "\n"))$book; cat(unlist(b[c("chapters", "appendices")], use.names = FALSE), sep = "\n")') || exit 1
+else
+  echo "FAIL: install yq or Rscript with the yaml package"
+  exit 1
+fi
+slugs=$(printf '%s\n' "$entries" | tr -d '\r' | grep '\.qmd$' | sed 's/\.qmd$//')
 
 if [ -z "$slugs" ]; then
   echo "FAIL: no chapters or appendices found in $YAML"

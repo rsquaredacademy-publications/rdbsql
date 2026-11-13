@@ -27,7 +27,7 @@ jobs:
           r-version: "4.4.2"
 
       - name: Install R packages
-        run: R -e 'install.packages(c("DBI", "RSQLite", "dbplyr", "knitr", "rmarkdown", "readr", "dplyr"), repos = "https://packagemanager.posit.co/cran/__linux__/jammy/latest")'
+        run: R -e 'install.packages(c("DBI", "RSQLite", "dbplyr", "knitr", "rmarkdown", "readr", "dplyr", "nycflights13"), repos = "https://packagemanager.posit.co/cran/__linux__/jammy/latest")'
           # NOTE: duckdb omitted — the book's only duckdb chunk is eval=FALSE, and the
           # duckdb CRAN package compiles ~30+ min from source when no jammy binary exists.
 

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 145" role="img" aria-labelledby="title desc">
+  <title id="title">A named monthly summary</title>
+  <desc id="desc">336,776 flight rows become 12 monthly departure counts in a CTE. Keeping counts of at least 29,000 returns July with 29,425 and August with 29,327.</desc>
+  <rect width="760" height="145" fill="#fff"/>
+  <g fill="#eef5fa" stroke="#315b78" stroke-width="2">
+    <rect x="10" y="15" width="222" height="115" rx="8"/>
+    <rect x="269" y="15" width="222" height="115" rx="8"/>
+    <rect x="528" y="15" width="222" height="115" rx="8"/>
+  </g>
+  <g fill="#172f40" text-anchor="middle" font-family="sans-serif" font-size="18">
+    <text x="121" y="43">flights</text>
+    <text x="121" y="78">336,776 rows</text>
+    <text x="121" y="110" font-size="15">Scheduled departures</text>
+    <text x="380" y="43">monthly_departures</text>
+    <text x="380" y="78">12 rows</text>
+    <text x="380" y="110" font-size="15">One count per month</text>
+    <text x="639" y="43">Count ≥ 29,000</text>
+    <text x="639" y="78">July: 29,425</text>
+    <text x="639" y="110">August: 29,327</text>
+    <text x="250" y="80" font-size="26">→</text>
+    <text x="509" y="80" font-size="26">→</text>
+  </g>
+</svg>

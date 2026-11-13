@@ -1,254 +1,646 @@
-# SQL Basics {#sec-sqlbasics}
+# Selecting, sorting and filtering {#sec-sqlbasics}
 
-```{r setup, eval=TRUE, message=FALSE, echo=FALSE}
-library(dplyr)
-library(DBI)
-library(RSQLite)
-knitr::opts_chunk$set(R.options=list(max.print=50))
+```{r sql-basics-setup, include=FALSE}
+source("scripts/sql-setup.R")
 ```
 
 ## Introduction
 
 In this chapter, we will learn to:
 
-- select 
-    - single column
-    - multiple columns
-    - distinct values in a column
-- limit the number of records returned
-- handle NULL values
-- and filter columns using the following operators
-   - WHERE
-   - AND, or & NOT
-   - BETWEEN
-   - IN
-   - LIKE
+- choose columns with `SELECT` and a table with `FROM`
+- preview rows with `LIMIT`
+- sort results with `ORDER BY`, including ties
+- filter numbers, text and dates with `WHERE`
+- combine conditions with `AND`, `OR`, `NOT` and brackets
+- use `IN`, `BETWEEN` and `LIKE` for common filters
 
-We will use the following R packages:
-
-- [DBI](https://dbi.r-dbi.org/)
-- [RSQLite](https://rsqlite.r-dbi.org/)
-- [dbplyr](http://dbplyr.tidyverse.org/)
-
-```{r lite1aa, echo=FALSE, eval=TRUE, results='hide', message=FALSE}
-library(dbplyr)
-library(DBI)
-library(RSQLite)
-```
-
-All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/aravindhebbali/f44774d9c6e115c08d5e2e693380a00f) or run from `code/ch3-sqlbasics.R` in this repo.
+We will ask questions about New York City flight departures in 2013.
+Let us start with a small result and add one clause at a time. Each
+example runs directly against the SQLite file introduced in @sec-sql-intro.
+We do not need R syntax to read or change these queries.
 
 ## Set Up
 
-In order to be able to use the `ecom` data set for our case study, we will read 
-it using the **readr** package and then copy it to an in memory database using the 
-`copy_to()` function from **dplyr**.
+If you are reading, the query results are already shown below each
+example. If you are following along locally, open `data/flights.sqlite`
+in your SQL tool. See [how to follow along](sql-intro.qmd#how-to-follow-along)
+for the build instructions.
 
-```{r setup2a, message=FALSE}
-# Canonical ecom: 1000 rows x 8 cols (referrer, device, bouncers, n_visit,
-# n_pages, duration, country, purchase), from the local data/web.csv snapshot.
-web_path <- if (file.exists("data/web.csv")) "data/web.csv" else "https://raw.githubusercontent.com/rsquaredacademy/datasets/master/web.csv"
-ecom <- readr::read_csv(web_path, show_col_types = FALSE)
-ecom <- dplyr::select(ecom, referrer, device, bouncers, n_visit, n_pages, duration, country, purchase)
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-dplyr::copy_to(con, ecom)
-```
+We mainly use `flights` and `airlines`. In `flights`, `origin` and `dest`
+are airport codes, `carrier` identifies the airline, and `dep_delay` is
+measured in minutes. The added `flight_date` column contains calendar
+dates as `YYYY-MM-DD` text. These names are worth keeping beside the editor.
+
+Before writing a query, say the question in words. For example, “Which
+five flights had the largest departure delays?” tells us the table,
+the sort direction and the result size. We can then translate each
+part into a clause.
+
 ## Select Columns
 
-The SQL SELECT statement is used to fetch the data from a database table.
+`SELECT` names the columns we want in the result. `FROM` names the table
+that supplies them. Selecting columns changes the width of the result;
+it does not choose which rows qualify.
 
 ### Syntax
 
-Below is the basic syntax of the SELECT statement.
+Write `SELECT`, a comma-separated column list, then `FROM` and the table
+name. SQL keywords are uppercase in our examples so they are easy to
+spot. Line breaks and indentation make a longer query easier to read.
 
-`SELECT column1, column2, columnN FROM table_name;`
-
-Here, column1, column2... are the fields of a table whose values you want to fetch. 
-If you want to fetch all the fields, use the following syntax.
-
-`SELECT * FROM table_name;`
+The semicolon ends the statement. We put it after the final clause,
+not after every line. If we put it after `FROM flights`, a following
+`LIMIT` would belong to a new, incomplete statement.
 
 ### Select Single Column
 
-Let us begin by selecting the `device` field from the `ecom` table.
+Let us request the airline names. We sort by their carrier codes and
+keep five rows so that the preview is small and repeatable:
 
 ```{sql, connection=con}
-SELECT device FROM ecom
+SELECT name
+FROM airlines
+ORDER BY carrier
+LIMIT 5;
 ```
+
+The source table contains both `carrier` and `name`, but our result
+contains only `name`. SQLite can sort by the carrier column without
+showing it. We will usually show the sort columns while learning so
+that we can check the order ourselves.
 
 ### Select Multiple Columns
 
-Select the following fields from the `ecom` table:
-
-- `referrer`
-- `device`
-- `purchase`
+Separate column names with commas. Let us put the name first and the
+carrier code second:
 
 ```{sql, connection=con}
-SELECT referrer, device, purchase  FROM ecom
+SELECT name, carrier
+FROM airlines
+ORDER BY carrier
+LIMIT 5;
 ```
+
+The result follows the order of the `SELECT` list. It need not follow
+the columns' stored order. Whenever we want particular columns, we name
+them explicitly in `SELECT`.
+
+A missing comma can be difficult to notice. SQLite accepts
+`SELECT carrier name FROM airlines` as one column called `name`.
+It treats the second word as a temporary column name. Check both the
+headings and the number of columns when a result looks wrong.
 
 ### Select All Columns
 
-Select all the fields from the `ecom` table.
+An asterisk requests every column in the source table:
 
 ```{sql, connection=con}
-SELECT * FROM ecom
+SELECT *
+FROM airlines
+ORDER BY carrier
+LIMIT 3;
 ```
+
+This is convenient for inspecting a small table. For a regular report,
+name the columns you need. A future source column would otherwise appear
+in the result without a change to your query. The `flights` table also
+has many more columns, so an explicit list makes its results easier to read.
 
 ## Limit
 
-If you have a large table with thousands of rows, returning all the records
-will take time. Use LIMIT to specify the number of records to return.
+`LIMIT` sets the maximum number of result rows. It does not sample the
+table, and it does not reduce the stored data. Let us preview five
+departures in calendar and scheduled-time order:
 
 ```{sql, connection=con}
-SELECT * FROM ecom limit 10
+SELECT flight_date, sched_dep_time, carrier, flight, origin, dest
+FROM flights
+ORDER BY flight_date, sched_dep_time, carrier, flight, origin
+LIMIT 5;
 ```
 
-## Distinct
+A query with `LIMIT 5` returns fewer rows if fewer qualify. Asking for
+five rows from an empty result still gives an empty result. There are
+no placeholder rows to make up the difference.
 
-A column in a table may often contain many duplicate values; and we might be interested only in the 
-distinct/unique values. In such cases, we can use the SELECT DISTINCT statement to return only distinct values.
+Without `ORDER BY`, SQLite does not promise which rows come first.
+A preview can look unchanged across several runs, but that is not an
+ordering guarantee. Whenever “first”, “last”, “largest” or “smallest” is
+part of the question, specify the order before applying `LIMIT`.
+
+`LIMIT` makes the returned table small. It does not guarantee that SQLite
+has little work to do: finding the largest delay may still require
+examining many flights. We use it here to keep the answer manageable.
+
+## Order By {#order-by}
+
+`ORDER BY` arranges result rows by one or more columns. The default is
+ascending order, from smaller values to larger values. `ASC` makes that
+choice explicit. `DESC` reverses the direction.
+
+Let us find five flights with the largest departure delays:
 
 ```{sql, connection=con}
-SELECT distinct referrer FROM ecom
+SELECT flight_date, carrier, flight, origin, dest, dep_delay
+FROM flights
+ORDER BY dep_delay DESC, flight_date ASC, carrier ASC, flight ASC, origin ASC
+LIMIT 5;
 ```
+
+The first sort column decides the main order. Later columns break ties.
+Here we sort equal delays by date, then carrier, flight number and origin.
+We keep the flight identifiers in the result so that we can describe
+which departure each delay belongs to.
+
+### Ties and top rows
+
+Suppose several departures have the same delay. `ORDER BY dep_delay DESC`
+alone leaves their relative order unspecified. A later sort column
+makes the intended tie rule visible to the reader.
+
+Each direction belongs to one column. In `ORDER BY dep_delay DESC,
+flight_date`, delays run largest first while dates within each delay
+run earliest first. A final `DESC` does not reverse every earlier column.
+
+`LIMIT 5` means at most five rows, even if more flights tie at the boundary.
+It does not mean five different delay values or all rows tied for fifth.
+Decide which of these questions you mean before interpreting a top-five table.
+
+### Text order
+
+Text also has an order. Let us arrange airline names alphabetically:
+
+```{sql, connection=con}
+SELECT carrier, name
+FROM airlines
+ORDER BY name ASC, carrier ASC
+LIMIT 8;
+```
+
+For these similarly capitalised names, the order reads like an alphabetical
+list. Our database uses SQLite's default binary text comparison: case
+and character codes matter. Mixed uppercase and lowercase text need not
+sort like a person's dictionary. Sort rules can also differ from a
+pattern match, as we will see with `LIKE`.
+
+Missing values need care when sorting. In our SQLite setup, `NULL` comes
+before nonmissing numbers in ascending order and after them in descending
+order. An ascending delay query can therefore start with missing delays.
+A missing value does not mean the flight departed unusually early.
 
 ## Filter
 
-Now that we know how to select columns, let us focus on filtering data. In SQL, the WHERE keyword is used to extract only those records that fulfill a specified condition. Data filter based on both text and numeric values in a table. Below are a few comparison operators we can use:
-
-- `=` equal
-- `<>` not equal
-- `<` less than
-- `>` greater than
-- `<=` less than or equal to
-- `>=` greater than or equal to
-
-
-The following SQL statement filters all rows from the `ecom` table where the `duration` field
-is greater than 300.
+`WHERE` keeps rows that satisfy a condition. A condition compares values
+and is tested for each input row. Let us keep departures delayed by
+more than an hour:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-WHERE duration > 300
+SELECT flight_date, carrier, flight, origin, dest, dep_delay
+FROM flights
+WHERE dep_delay > 60
+ORDER BY dep_delay DESC, flight_date, carrier, flight, origin
+LIMIT 5;
 ```
 
-Let us filter data based on a text value. In the following example, we filter all rows 
-from the `ecom` table where the `device` used is `mobile`.
+We filter before taking the five result rows. We do not take five arbitrary
+flights and then check their delays. This distinction matters whenever
+a selective filter is combined with a small limit.
+
+### Compare numbers
+
+We can use these comparison operators:
+
+| Operator | Meaning | Example |
+|:--|:--|:--|
+| `=` | Equal to | `month = 1` |
+| `<>` | Not equal to | `origin <> 'JFK'` |
+| `>` | Greater than | `dep_delay > 60` |
+| `>=` | Greater than or equal to | `dep_delay >= 60` |
+| `<` | Less than | `distance < 500` |
+| `<=` | Less than or equal to | `distance <= 500` |
+
+The boundary is part of the question. `> 60` excludes a delay of exactly
+60 minutes. `>= 60` includes it. State the boundary in words when writing
+a report: “more than an hour” and “at least an hour” ask different questions.
+
+### Compare text
+
+Put text values in single quotes. Column and table names are unquoted
+in our examples:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-WHERE device = 'mobile'
+SELECT flight_date, carrier, flight, origin, dest
+FROM flights
+WHERE origin = 'JFK'
+ORDER BY flight_date, sched_dep_time, carrier, flight
+LIMIT 5;
 ```
 
-## And, Or & Not
+Here `origin` names a column and `'JFK'` supplies a value. Without the
+quotes, SQLite tries to interpret `JFK` as a name. Double quotes are
+for identifiers; use single quotes consistently for text values.
 
-The WHERE clause can be combined with other operators such as  
+In our database, equality distinguishes `'JFK'` from `'jfk'`. An empty
+result after changing letter case can be correct. Check the stored
+spelling before assuming that the table has no relevant observations.
+We will use `LIKE` later for a different kind of text comparison.
 
-- AND - displays a record if all the conditions separated by AND is TRUE
-- OR  - displays a record if any of the conditions separated by OR is TRUE
-- NOT - displays a record if the condition(s) is NOT TRUE
+### Compare ISO dates
 
-to filter data based on more than one condition or to create more complex conditions.
-
-In the following example, we filter all the rows from the `ecom` table where
-`n_visit` (visit count) is greater than 3 and `duration` (time spent on the site)
-is greater than 100. We use AND to create multiple conditions.
+Our `flight_date` values all use the fixed-width format `YYYY-MM-DD`.
+Because the year comes first, then month and day, text order follows
+calendar order for these values. Let us keep departures on July 4:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-WHERE n_visit > 3 AND duration > 100
+SELECT flight_date, carrier, flight, origin, dest
+FROM flights
+WHERE flight_date = '2013-07-04'
+ORDER BY sched_dep_time, carrier, flight, origin
+LIMIT 5;
 ```
 
-In the next example, we will use both AND & OR. Our goal is to filter all 
-rows from the `ecom` table that follow the below conditions:
+The quotes matter here too. `2013-07-04` without quotes is subtraction,
+not a date value. Also keep the leading zero in `07`. A differently
+formatted text value does not automatically become the same calendar date.
 
-- `n_visit` (visit count) is either equal to 3 or 5
-- `device` used to visit the website is either `mobile` or `tablet`
+We can compare dates with `<`, `>=` and the other operators. This works
+because this particular column uses one consistent format. A column
+mixing `04/07/2013` and `2013-07-04` would need preparation before using
+text comparisons to answer calendar questions.
+
+## And, Or & Not {#and-or-not}
+
+We often need more than one condition. `AND` requires both conditions
+to be true. `OR` requires at least one. `NOT` reverses a condition's
+truth value; missing values need separate treatment.
+
+Let us keep JFK departures delayed by more than an hour:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom WHERE (n_visit = 5 OR n_visit = 3)  
-AND (device = 'mobile' OR device = 'tablet')
+SELECT flight_date, carrier, flight, origin, dest, dep_delay
+FROM flights
+WHERE origin = 'JFK' AND dep_delay > 60
+ORDER BY dep_delay DESC, flight_date, carrier, flight
+LIMIT 5;
 ```
 
-## BETWEEN
+Read the filter as a sentence: the origin is JFK **and** the delay is
+more than 60 minutes. Both conditions refer to the same flight row.
+A row satisfying only one condition is excluded.
 
-The BETWEEN operator selects values within a given range and is inclusive: begin and end values are included. The values can be numbers, text, or dates. In the following example, we filter rows from 
-the `ecom` table where the visit count is between 1 and 3, and the `device` used to visit the website is
-`mobile`.
+### Brackets make the question clear
+
+Let us include departures from either JFK or LGA, with a delay over an hour:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom
-WHERE n_visit BETWEEN 1 AND 3 AND device = 'mobile'
+SELECT flight_date, carrier, flight, origin, dep_delay
+FROM flights
+WHERE (origin = 'JFK' OR origin = 'LGA') AND dep_delay > 60
+ORDER BY dep_delay DESC, flight_date, carrier, flight, origin
+LIMIT 5;
 ```
+
+The brackets say which alternatives belong together. Without them,
+`origin = 'JFK' OR origin = 'LGA' AND dep_delay > 60` keeps **every JFK
+row**, plus delayed LGA rows. SQLite applies `AND` before `OR`; it does
+not simply evaluate these words from left to right.
+
+This picture groups the unbracketed condition. Read each box as one
+condition and the arrows as how their truth values combine:
+
+![](img/sql-precedence.svg){fig-alt="The LGA and delay tests combine with AND before OR combines that result with the JFK test."}
+
+For the operators in this section, comparisons bind before `NOT`, then
+`AND`, then `OR`. Use brackets around the alternatives even when the
+default precedence would give the right answer. The query then records
+our intention for the next person who reads it.
+
+### Exclude a condition
+
+`NOT` is useful when we want to exclude a group of possibilities:
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight, origin, dest
+FROM flights
+WHERE NOT (origin = 'JFK' OR origin = 'LGA')
+ORDER BY flight_date, sched_dep_time, carrier, flight, origin
+LIMIT 5;
+```
+
+The remaining origins are EWR. This follows from the three origins in
+this data; it is not a general rule that excluding two airport codes
+always identifies a third.
+
+Avoid `origin = 'JFK' AND origin = 'LGA'`. A single flight row cannot have
+both values in the same column. Use `OR` for alternatives, or the shorter
+membership test in the next section.
 
 ## IN
 
-The IN operator allows us to specify multiple values in a WHERE clause. It is a shorthand 
-for multiple OR conditions. In the below example, we filter rows from the `ecom` table where
-the visit count is either 2 or 4 or 6 or 8 or 10. Instead of using multiple OR conditions, 
-we use the IN operator.
+`IN` asks whether a value belongs to a list. Let us keep flights from
+three carriers:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-WHERE n_visit IN (2, 4, 6, 8, 10)
+SELECT flight_date, carrier, flight, origin, dest
+FROM flights
+WHERE carrier IN ('AA', 'DL', 'UA')
+ORDER BY flight_date, sched_dep_time, carrier, flight, origin
+LIMIT 5;
 ```
 
-## IS NULL
+This is the compact form of `carrier = 'AA' OR carrier = 'DL' OR
+carrier = 'UA'`. The list goes in parentheses, and each text value gets
+its own quotes. `'AA, DL, UA'` is one text value, not three choices.
 
-A field with a NULL value is a field with no value. If a field in a table is optional, it is possible to insert a new record or update a record without adding a value to this field. Then, the field will be saved with a NULL value. In the next example, we filter all rows from the `ecom` table where the `device` column
-has NULL values.
+We can combine the membership test with another condition using `AND`.
+It then applies to every listed carrier. Whenever several exact values
+of one column qualify, `IN` makes that part of the question easy to scan.
+
+The order of the values in the list does not order the output. Listing
+`'UA'` first does not put United flights first. Use `ORDER BY` for the
+result order, independently of how the filter is written.
+
+## BETWEEN
+
+`BETWEEN` includes both ends of a range. Let us request delays from
+60 through 120 minutes, including exactly 60 and exactly 120:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-WHERE device IS NULL
+SELECT flight_date, carrier, flight, origin, dep_delay
+FROM flights
+WHERE dep_delay BETWEEN 60 AND 120
+ORDER BY dep_delay, flight_date, carrier, flight, origin
+LIMIT 5;
 ```
+
+This means `dep_delay >= 60 AND dep_delay <= 120`. Put the lower bound
+first. Reversing the endpoints does not make SQLite swap them for us.
+
+Our ISO date text works with the same operator. The following includes
+all calendar dates from July 1 through July 4:
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight, origin, dest
+FROM flights
+WHERE flight_date BETWEEN '2013-07-01' AND '2013-07-04'
+ORDER BY flight_date DESC, sched_dep_time, carrier, flight, origin
+LIMIT 5;
+```
+
+This example filters a date-only column. A timestamp includes a time as
+well, so an upper bound containing only a date would need a different
+interpretation. Use the column whose meaning matches the question.
+
+The `AND` inside `BETWEEN` separates its two bounds. An additional `AND`
+after the upper bound can add another condition, such as
+`origin = 'JFK'`. Keep the range together when reading the query aloud.
 
 ## LIKE
 
-The LIKE operator is used to search for a specific pattern in a column. There are two wildcards used in conjunction with the LIKE operator:
-
-- % : represents zero, one, or multiple characters
-- _ : represents a single character
-
-In the following example, we filter all rows from the `ecom` table where the name of the `country` starts with `P`. We use `%` after `P` to indicate that it can be followed by any number or type of characters.
+`LIKE` compares text with a pattern. A percent sign, `%`, matches zero
+or more characters. An underscore, `_`, matches exactly one character.
+Let us find airline names containing the word “Air”:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-WHERE country LIKE 'P%'
+SELECT carrier, name
+FROM airlines
+WHERE name LIKE '%Air%'
+ORDER BY name, carrier;
 ```
 
-Let us look at another example where we filter all rows from the `ecom` table where the name of the
-country should follow the below conditions:
+The first `%` allows text before `Air`; the second allows text after it.
+`'Air%'` would require the name to start with those letters. `'%Air'`
+would require it to end with them. Without either wildcard, `'Air'`
+would need to match the whole name.
 
-- name can start with any character
-- the second character must be `o`
-- it can have any type or number of characters after the second character
+Let us also find airport codes with `F` as their second character:
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-WHERE country LIKE '_o%'
+SELECT faa, name
+FROM airports
+WHERE faa LIKE '_F_'
+ORDER BY faa
+LIMIT 5;
 ```
 
-```{r sql1-close}
-dbDisconnect(con)
+There are exactly three pattern positions here. Each underscore stands
+for one character. To allow any length after the second character,
+we would use `'_F%'` instead.
+
+In the default SQLite configuration used here, `LIKE` ignores case for
+ASCII letters. We can therefore find JetBlue using a lowercase pattern:
+
+```{sql, connection=con}
+SELECT carrier, name
+FROM airlines
+WHERE name LIKE 'jet%'
+ORDER BY carrier;
 ```
 
-## Exercises
+This differs from the case-sensitive equality comparison earlier.
+SQLite's default `LIKE` does not extend this case folding to all non-ASCII
+letters. When a text filter surprises us, check the operator, the pattern
+and the stored spelling. See SQLite's
+[expression reference](https://www.sqlite.org/lang_expr.html#like) for its rules.
 
-1. List the `referrer` and `device` of 5 visits with more than 8 page views
-   (`n_visit > 8`), ordered by longest `duration` first.
-2. How many rows are from `tablet` devices in countries starting with `P`?
-3. Which distinct `device` values appear among bouncers (`bouncers = 1`)?
+## Put the clauses together
 
-Worked solutions in `solutions/sql-basics.md` (attempt first).
+Let us answer one complete question: “Which five JFK departures in July
+travelled more than 2,000 miles, with the longest distances first?” Start
+with what one result row should represent. We want an individual flight,
+so the source is `flights` and the result should include its identifiers.
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight, origin, dest, distance
+FROM flights
+WHERE origin = 'JFK'
+  AND flight_date BETWEEN '2013-07-01' AND '2013-07-31'
+  AND distance > 2000
+ORDER BY distance DESC, flight_date, carrier, flight
+LIMIT 5;
+```
+
+The written clause order stays the same even when the question becomes
+longer. Additional conditions belong inside `WHERE`; they do not require
+us to move `SELECT` or `LIMIT`.
+
+| Written order | Meaning when understanding the answer |
+|:--|:--|
+| `SELECT` | Choose the columns to display from qualifying rows |
+| `FROM` | Start with rows from the named table |
+| `WHERE` | Keep rows meeting the conditions |
+| `ORDER BY` | Arrange the result by the requested columns |
+| `LIMIT` | Keep at most the requested number of rows |
+
+To understand this answer, start at `FROM`, apply `WHERE`, then read
+`SELECT`, `ORDER BY` and `LIMIT`. This is a logical reading of the query;
+SQLite can choose its own physical method of finding the result.
+
+Check the answer in the same terms as the question. Every displayed
+origin should be JFK. Every date should fall within July. Every distance
+should exceed 2,000, and the distances should run from largest to smallest.
+Only after these checks should we describe the result in words.
+
+If a result is empty, simplify the filter one condition at a time. First
+check that the airport value exists. Then check the date range, and then
+the distance boundary. An empty result is sometimes the right answer;
+changing several clauses at once makes it harder to see why it occurred.
+
+If a query fails, read the error and inspect the named clause. Check the
+column spelling, commas, quotes and written clause order. Keeping one
+clause per line gives us a small place to start looking.
+
+## Distinct
+
+For unique values rather than individual flight rows, see `DISTINCT`
+in @sec-sql2.
+
+## IS NULL
+
+Missing delays need `IS NULL`, rather than `= NULL`; the planned chapter
+on `NULL` will explain missing-value filters in full.
+
+## Common mistakes
+
+> **Check the question as well as the syntax**
+>
+> - **A missing comma is harmless.** It can silently rename a selected
+>   column. Check the result headings and column count.
+> - **The default sort is largest first.** Ascending is the default; use
+>   `DESC` for the largest delays.
+> - **`LIMIT` can precede `ORDER BY`.** Write the sort clause first, then
+>   the limit at the end.
+> - **Unquoted text or dates are values.** Quote `'JFK'` and `'2013-07-04'`.
+>   Otherwise SQLite can interpret names or arithmetic.
+> - **Conditions run left to right.** `AND` binds before `OR`. Bracket
+>   the airport alternatives before applying the delay condition.
+> - **Two alternatives require `AND`.** Use `origin IN ('JFK', 'LGA')`;
+>   one origin value cannot equal both codes.
+> - **`LIKE 'Air'` finds any name containing Air.** Use `'%Air%'` for a
+>   contains pattern.
+> - **Reversed range bounds are equivalent.** Put 60 before 120 in
+>   `BETWEEN 60 AND 120`.
+>
+
+<span id="exercises"></span>
+
+## Try it
+
+Attempt each question before opening its answer. We use `LIMIT 5` for
+small previews; these answers display individual flights, not totals.
+
+1. Show five airline names and carrier codes, sorted by name.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT name, carrier
+FROM airlines
+ORDER BY name, carrier
+LIMIT 5;
+```
+
+</details>
+
+2. Find the five longest-distance departures from LGA. Show the date,
+   carrier, flight, destination and distance. Break distance ties by date,
+   carrier and flight number.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight, dest, distance
+FROM flights
+WHERE origin = 'LGA'
+ORDER BY distance DESC, flight_date, carrier, flight
+LIMIT 5;
+```
+
+</details>
+
+3. Show five departures from JFK or EWR on January 1. Sort by scheduled
+   departure time, then carrier, flight and origin.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT flight_date, sched_dep_time, carrier, flight, origin, dest
+FROM flights
+WHERE origin IN ('JFK', 'EWR') AND flight_date = '2013-01-01'
+ORDER BY sched_dep_time, carrier, flight, origin
+LIMIT 5;
+```
+
+</details>
+
+4. Preview five AA flights delayed from 30 through 60 minutes, endpoints
+   included. Put the largest qualifying delay first.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight, origin, dep_delay
+FROM flights
+WHERE carrier = 'AA' AND dep_delay BETWEEN 30 AND 60
+ORDER BY dep_delay DESC, flight_date, flight, origin
+LIMIT 5;
+```
+
+</details>
+
+5. Why does `origin = 'JFK' OR origin = 'LGA' AND month = 7` include
+   JFK flights outside July? Write a query for the intended July preview.
+
+<details>
+<summary>Answer</summary>
+
+`AND` binds before `OR`, so the month condition applies only to LGA.
+Bracket the airport alternatives so that July applies to both:
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight, origin
+FROM flights
+WHERE (origin = 'JFK' OR origin = 'LGA') AND month = 7
+ORDER BY flight_date, sched_dep_time, carrier, flight, origin
+LIMIT 5;
+```
+
+</details>
+
+6. Find airline names starting with “American”. Does a lowercase pattern
+   work in this SQLite setup?
+
+<details>
+<summary>Answer</summary>
+
+Yes. Default `LIKE` ignores case for ASCII letters:
+
+```{sql, connection=con}
+SELECT carrier, name
+FROM airlines
+WHERE name LIKE 'american%'
+ORDER BY name, carrier;
+```
+
+</details>
+
+## Key points
+
+- `SELECT` chooses columns; `WHERE` chooses matching rows.
+- `ORDER BY` defines the order, and `LIMIT` caps the result size.
+- Single quotes mark text and ISO date values.
+- Brackets make combined conditions clear; `AND` binds before `OR`.
+- `IN`, inclusive `BETWEEN` and wildcard `LIKE` express common filters.
+
+Next: [Calculated columns and SQLite types](sql-calculated.qmd).
+
+Practise in [Intro to SQL, lessons 1–4]({{< var sql_course_url >}}).
+
+```{r sql-basics-close, include=FALSE}
+DBI::dbDisconnect(con)
+```

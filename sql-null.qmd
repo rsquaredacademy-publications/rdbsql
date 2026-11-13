@@ -1,0 +1,481 @@
+# NULL and three-valued logic {#sec-sql-null}
+
+```{r sql-null-setup, include=FALSE}
+source("scripts/sql-setup.R")
+```
+
+## Introduction
+
+In this chapter, we will learn to:
+
+- distinguish missing values from zero and empty text
+- find missing values with `IS NULL` and `IS NOT NULL`
+- read conditions that produce true, false or unknown
+- combine unknown conditions with `AND`, `OR` and `NOT`
+- count missing values and interpret aggregates
+- use `COALESCE` and `NULLIF` with a stated purpose
+
+Some flights have no recorded departure delay or aircraft tail number.
+We can still count these scheduled departures. We cannot treat a missing
+delay as evidence that the flight departed on time.
+
+Let us work through what a missing value means for a comparison, a
+filter and a summary. The same rules will help us read missing values
+created by a left join in the next chapter.
+
+## Set Up
+
+We use `flights` from `data/flights.sqlite`, introduced in
+@sec-sql-intro. `dep_delay` measures departure delay in minutes;
+`tailnum` identifies the aircraft. Each row represents a scheduled
+departure, including rows without a recorded delay.
+
+Results come from the database when the book renders. In these tables,
+the R-based renderer may print a SQL `NULL` as `NA`. That is its display
+of a missing result, not the text stored in the SQLite cell.
+
+## NULL means a value is missing
+
+SQL `NULL` marks a missing or unknown value. It is not a number, an
+empty string, or the word `'NULL'`. A recorded departure delay of zero
+means no delay. A missing departure delay gives us no such measurement.
+
+Let us count the rows and the recorded values:
+
+```{sql, connection=con}
+SELECT COUNT(*) AS departures,
+       COUNT(dep_delay) AS recorded_delays,
+       COUNT(tailnum) AS recorded_tailnums,
+       COUNT(*) - COUNT(dep_delay) AS missing_delays,
+       COUNT(*) - COUNT(tailnum) AS missing_tailnums
+FROM flights;
+```
+
+There are 336,776 departures, 328,521 recorded delays and 334,264
+recorded tail numbers. The differences give 8,255 missing delays and
+2,512 missing tail numbers. Each column has its own missingness count;
+a row can have a value in one column and a gap in another.
+
+The data's meaning also matters. A missing delay alone does not tell
+us why the measurement is absent. We should report it as missing rather
+than infer a cause from this field alone.
+
+## Equality cannot find NULL
+
+An ordinary comparison with `NULL` produces unknown. Even comparing
+`NULL` with itself does not establish equality:
+
+```{sql, connection=con}
+SELECT NULL = NULL AS missing_equals_missing,
+       0 = NULL AS zero_equals_missing,
+       'NULL' = NULL AS word_equals_missing;
+```
+
+All three results are `NULL`. Equality asks whether two known values
+are equal. A missing value does not supply that knowledge. Quoting
+`'NULL'` instead gives us four ordinary text characters.
+
+`WHERE` keeps rows only when its condition is true. It discards both
+false and unknown results. This explains a common empty result:
+
+```{sql, connection=con}
+SELECT COUNT(*) AS departures
+FROM flights
+WHERE dep_delay = NULL;
+```
+
+The count is zero because `dep_delay = NULL` is never true. Replacing
+`=` with `<>` does not solve the problem; inequality with a missing
+value is unknown too.
+
+Use `IS NULL` to test for a missing value:
+
+```{sql, connection=con}
+SELECT COUNT(*) AS missing_delays
+FROM flights
+WHERE dep_delay IS NULL;
+```
+
+This returns 8,255. The complementary test is `IS NOT NULL`:
+
+```{sql, connection=con}
+SELECT COUNT(*) AS recorded_delays
+FROM flights
+WHERE dep_delay IS NOT NULL;
+```
+
+This returns 328,521. These two tests give a definite answer for each
+row, so their counts add up to all scheduled departures.
+
+We can check that zero and empty text are different cases:
+
+```{sql, connection=con}
+SELECT COUNT(*) AS zero_delays
+FROM flights
+WHERE dep_delay = 0;
+```
+
+```{sql, connection=con}
+SELECT COUNT(*) AS empty_tailnums
+FROM flights
+WHERE tailnum = '';
+```
+
+There are 16,514 zero delays and no empty tail numbers in this database.
+The 2,512 missing tail numbers remain a separate category. In another
+database, a blank string or a code could represent missing information.
+Inspect the stored values before choosing a missing-value test.
+
+## Three-valued logic
+
+A comparison can produce **true**, **false**, or **unknown**. SQLite
+shows true as 1, false as 0, and unknown as `NULL` in these examples.
+This is called three-valued logic.
+
+Let us read the complete `AND` and `OR` truth table in three rows.
+Each query fixes a left condition, `p`. Columns `and_true`, `and_false`
+and `and_null` combine it with a right condition of true, false or
+unknown. The three `or_` columns do the same for `OR`:
+
+```{sql, connection=con}
+SELECT 'TRUE' AS p,
+       1 AND 1 AS and_true, 1 AND 0 AS and_false,
+       1 AND NULL AS and_null,
+       1 OR 1 AS or_true, 1 OR 0 AS or_false,
+       1 OR NULL AS or_null;
+```
+
+```{sql, connection=con}
+SELECT 'FALSE' AS p,
+       0 AND 1 AS and_true, 0 AND 0 AS and_false,
+       0 AND NULL AS and_null,
+       0 OR 1 AS or_true, 0 OR 0 AS or_false,
+       0 OR NULL AS or_null;
+```
+
+```{sql, connection=con}
+SELECT 'NULL' AS p,
+       NULL AND 1 AS and_true, NULL AND 0 AS and_false,
+       NULL AND NULL AS and_null,
+       NULL OR 1 AS or_true, NULL OR 0 AS or_false,
+       NULL OR NULL AS or_null;
+```
+
+For `AND`, a false condition makes the whole expression false. We do
+not need to know the other condition. If neither condition is false,
+an unknown leaves the result unknown.
+
+For `OR`, a true condition makes the whole expression true. If neither
+condition is true, an unknown leaves the result unknown. These rules
+explain why `0 AND NULL` is false while `1 OR NULL` is true.
+
+`NOT` reverses true and false, but unknown remains unknown:
+
+```{sql, connection=con}
+SELECT NOT 1 AS not_true, NOT 0 AS not_false,
+       NOT NULL AS not_unknown;
+```
+
+Consider a request for departures that were not late. This filter
+includes only recorded delays of zero or less:
+
+```{sql, connection=con}
+SELECT COUNT(*) AS recorded_nonlate
+FROM flights
+WHERE NOT (dep_delay > 0);
+```
+
+The count is 200,089. Missing delays do not enter the result, because
+negating an unknown comparison leaves it unknown. “Not known to be
+late” and “known to be not late” describe different selections.
+
+If we want both nonpositive recorded delays and missing delays, state
+both cases:
+
+```{sql, connection=con}
+SELECT COUNT(*) AS nonlate_or_missing
+FROM flights
+WHERE dep_delay <= 0 OR dep_delay IS NULL;
+```
+
+This returns 208,344. Whenever missing values should survive a filter,
+write their inclusion explicitly. Brackets still help when we combine
+that rule with other `AND` conditions.
+
+## Aggregates skip missing inputs
+
+As we saw in @sec-sql2, `COUNT(*)` counts rows. `COUNT(column)` counts
+nonmissing values. `SUM`, `AVG`, `MIN` and `MAX` skip `NULL` inputs:
+
+```{sql, connection=con}
+SELECT SUM(dep_delay) AS net_delay_minutes,
+       ROUND(AVG(dep_delay), 2) AS average_delay,
+       MIN(dep_delay) AS earliest_delay,
+       MAX(dep_delay) AS latest_delay
+FROM flights;
+```
+
+The net delay is 4,152,200 minutes and the average is 12.64 minutes.
+The average uses the 328,521 recorded delays as its denominator.
+Negative delays contribute to the total, so this is a net total rather
+than a total of late minutes alone.
+
+Skipping missing inputs does not mean replacing them with zero. For a
+selection where every delay is missing, the numeric aggregates return
+`NULL`, while `COUNT(dep_delay)` returns zero:
+
+```{sql, connection=con}
+SELECT COUNT(*) AS departures, COUNT(dep_delay) AS recorded_delays,
+       SUM(dep_delay) AS total_delay, AVG(dep_delay) AS average_delay,
+       MIN(dep_delay) AS minimum_delay, MAX(dep_delay) AS maximum_delay
+FROM flights
+WHERE dep_delay IS NULL;
+```
+
+There are 8,255 rows but no measured delay to summarize. An ungrouped
+summary over no matching rows also gives zero counts and `NULL` for
+these four numeric aggregates. A missing total does not establish a
+measured total of zero.
+
+We can audit missingness by group using the same subtraction:
+
+```{sql, connection=con}
+SELECT origin, COUNT(*) AS departures,
+       COUNT(*) - COUNT(dep_delay) AS missing_delays,
+       COUNT(*) - COUNT(tailnum) AS missing_tailnums
+FROM flights
+GROUP BY origin
+ORDER BY origin;
+```
+
+EWR has 3,239 missing delays, JFK 1,863 and LGA 3,153. The corresponding
+tail-number counts are 606, 909 and 997. Group summaries make these gaps
+visible beside the size of each airport's scheduled departures.
+
+Counts are easier to compare across groups when we also show a
+denominator. Let us calculate missing-delay percentages for each origin:
+
+```{sql, connection=con}
+SELECT origin, COUNT(*) AS departures,
+       COUNT(*) - COUNT(dep_delay) AS missing_delays,
+       ROUND((COUNT(*) - COUNT(dep_delay)) * 100.0 / COUNT(*), 2)
+         AS missing_delay_percent
+FROM flights
+GROUP BY origin
+ORDER BY origin;
+```
+
+The denominator is every scheduled departure at that airport. We use
+`100.0` before division to retain the fractional percentage, then round
+the result. Changing the denominator to `COUNT(dep_delay)` would answer
+a different question: missing delays relative to recorded delays.
+
+Whenever we report a rate involving missingness, name the population
+in its denominator. Keeping the row count beside the percentage lets
+us see whether a similar percentage describes a small or large group.
+
+## Missing inputs in a calculation
+
+Ordinary arithmetic also carries missingness forward. A missing delay
+converted to hours remains missing; subtraction cannot recover a value
+when one input is absent:
+
+```{sql, connection=con}
+SELECT NULL / 60.0 AS missing_hours,
+       10 - NULL AS missing_difference,
+       NULL * 0 AS missing_times_zero;
+```
+
+All three results are `NULL`. Even multiplication by zero does not
+turn an unknown measurement into a known zero. When a calculated
+column contains a gap, inspect its input columns before treating it
+as a calculation error.
+
+This also affects summaries of expressions. `AVG(arr_delay - dep_delay)`
+uses only rows where both delays are recorded, because a missing input
+makes the difference missing. It need not use the same flights as
+`AVG(dep_delay)` alone. Check the number of nonmissing calculated values
+when comparing such summaries.
+
+## Supply a fallback with COALESCE
+
+`COALESCE` returns the first nonmissing argument, reading from left to
+right. We can use it to supply a display label for a missing identifier:
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight,
+       COALESCE(tailnum, 'Unknown') AS aircraft
+FROM flights
+WHERE tailnum IS NULL
+ORDER BY flight_date, sched_dep_time, carrier, flight, origin
+LIMIT 5;
+```
+
+The result shows `Unknown`; the stored tail numbers remain missing.
+If every argument is `NULL`, `COALESCE` also returns `NULL`. A fallback
+is a choice made by the query, not a recovered measurement.
+
+For a numeric measure, that choice can change the answer:
+
+```{sql, connection=con}
+SELECT ROUND(AVG(dep_delay), 2) AS recorded_average,
+       ROUND(AVG(COALESCE(dep_delay, 0)), 2) AS zero_filled_average
+FROM flights;
+```
+
+The averages are 12.64 and 12.33 minutes. The second calculation puts
+a zero into every missing delay and averages all 336,776 rows. Use it
+only when that assumption belongs to the question. For observed delay,
+keep the recorded-value average and report the missing count beside it.
+
+## Turn a special value into NULL with NULLIF
+
+`NULLIF(first, second)` returns `NULL` when the two arguments compare
+equal. Otherwise it returns the first argument:
+
+```{sql, connection=con}
+SELECT NULLIF(0, 0) AS zero_removed,
+       NULLIF(5, 0) AS five_kept,
+       NULLIF('', '') AS empty_removed;
+```
+
+This is useful when a documented special value should be treated as
+missing. For example, `NULLIF(tailnum, '')` would turn empty strings
+into `NULL`; it changes no recorded tail numbers in our current data.
+Do not apply `NULLIF(dep_delay, 0)`: zero is a valid measured delay.
+
+Another use makes a denominator rule explicit:
+
+```{sql, connection=con}
+SELECT SUM(dep_delay) * 1.0 / NULLIF(COUNT(dep_delay), 0) AS average_delay
+FROM flights
+WHERE dep_delay IS NULL;
+```
+
+The denominator becomes missing when no delays were recorded. The
+ratio is therefore missing too. SQLite already returns `NULL` for
+division by zero; `NULLIF` makes the intended treatment visible.
+It does not supply an average where there are no measurements.
+
+## Common mistakes
+
+> - Using `= NULL` or `<> NULL` to find missing or recorded values.
+> - Quoting `'NULL'` and expecting the missing-value marker.
+> - Assuming every blank or special code is stored as SQL `NULL`.
+> - Expecting `NOT` to turn an unknown condition into true.
+> - Treating `COUNT(*)` and `COUNT(dep_delay)` as interchangeable.
+> - Replacing missing delays with zero without stating the assumption.
+
+<span id="exercises"></span>
+
+## Try it
+
+### Find missing aircraft identifiers
+
+Count departures with no tail number.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT COUNT(*) AS missing_tailnums
+FROM flights
+WHERE tailnum IS NULL;
+```
+
+The count is 2,512.
+
+</details>
+
+### Combine missing-value tests
+
+Count departures missing both delay and tail number, then departures
+missing either. Do the two counts have to be equal?
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT COUNT(*) AS both_missing
+FROM flights
+WHERE dep_delay IS NULL AND tailnum IS NULL;
+```
+
+```{sql, connection=con}
+SELECT COUNT(*) AS either_missing
+FROM flights
+WHERE dep_delay IS NULL OR tailnum IS NULL;
+```
+
+The counts are 2,512 and 8,255. In this dataset, every missing tail
+number occurs on a row with a missing delay. That relationship is a
+property of these data, not a general rule about `NULL`.
+
+</details>
+
+### Predict an unknown condition
+
+Predict `NULL OR 0`, `NULL AND 0` and `NOT NULL`.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT NULL OR 0 AS unknown_or_false,
+       NULL AND 0 AS unknown_and_false,
+       NOT NULL AS not_unknown;
+```
+
+The results are unknown, false and unknown.
+
+</details>
+
+### Count recorded delays by airport
+
+Show the number of recorded and missing departure delays for each origin.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT origin, COUNT(dep_delay) AS recorded_delays,
+       COUNT(*) - COUNT(dep_delay) AS missing_delays
+FROM flights
+GROUP BY origin
+ORDER BY origin;
+```
+
+</details>
+
+### Compare two fallback rules
+
+Predict `COALESCE(NULL, 0, 5)` and `NULLIF(0, 0)`. Why do they differ?
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT COALESCE(NULL, 0, 5) AS first_recorded,
+       NULLIF(0, 0) AS matching_value_removed;
+```
+
+`COALESCE` keeps zero because zero is nonmissing. `NULLIF` returns
+missing because its two arguments compare equal.
+
+</details>
+
+## Key points
+
+- `NULL` marks missing information; zero and empty text are values.
+- Comparisons with `NULL` are unknown; use `IS NULL` or `IS NOT NULL`.
+- `WHERE` keeps true conditions; `NOT` leaves unknown conditions unknown.
+- Aggregates skip missing inputs; `COUNT(*)` still counts every row.
+- `COALESCE` supplies a fallback; `NULLIF` removes a specified equal value.
+
+Next: [Joining two tables](joins.qmd).
+
+Practise in [Intro to SQL, lesson 8]({{< var sql_course_url >}}).
+
+```{r sql-null-close, include=FALSE}
+DBI::dbDisconnect(con)
+```

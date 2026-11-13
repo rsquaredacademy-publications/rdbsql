@@ -2,7 +2,8 @@
 
 ![Cover](img/rdbsql.png)
 
-*R4DS Ch. 21 in 30 minutes leaves beginners behind. This book is the 2-hour ramp before it — DBI mechanics + first 20 SQL verbs, all runnable with zero setup.*
+Learn SQL with public flight data, then use databases from R with DBI and
+dbplyr. R users who know SQL can start at Part II.
 
 📖 **Read the book:** https://rdbsql.rsquaredacademy.com
 
@@ -11,34 +12,57 @@
 
 ## Syllabus
 
-| # | Chapter | You will learn |
-|:--|:--------|:---------------|
-| 1 | DBI | `dbConnect`, `dbListTables`, `dbReadTable`, `dbGetQuery`, `dbSendQuery`/`dbFetch`, `dbWriteTable`, `dbExecute`, `dbDisconnect` |
-| 2 | dbplyr | `tbl()`, `filter`, `select`, `group_by`+`summarise`, `show_query`, `explain`, `collect` + lazy evaluation |
-| 3 | SQL Basics | `SELECT`, `LIMIT`, `DISTINCT`, `WHERE`, `AND`/`OR`/`NOT`, `BETWEEN`, `IN`, `IS NULL`, `LIKE` |
-| 4 | SQL Advanced | `SUM`/`AVG`/`MIN`/`MAX`, `AS` aliases, `ORDER BY`, `GROUP BY` |
-| 5 | JOINs | `INNER JOIN`, `LEFT JOIN`, SQLite `RIGHT`/`FULL` trap, `inner_join`/`left_join`/`semi_join`/`anti_join` |
-| 6 | DBI Cheat Sheet | One-page command reference (CC BY-NC-SA 4.0) |
-| A | Production R Patterns | Connection strings, credentials, parameterized queries, transactions, `pool` |
-| B | DuckDB + Parquet | Same DBI code at analytical speed, query files without loading them |
+| Part | Chapter | You will learn |
+|:--|:--|:--|
+| I: SQL | Databases, tables and queries | Tables, keys, queries, flight data and local setup |
+| I | Selecting, sorting and filtering | `SELECT`, `LIMIT`, `ORDER BY`, `WHERE`, logical conditions, `IN`, `BETWEEN`, `LIKE` |
+| I | Calculated columns and SQLite types | Arithmetic, rounding, integer division, storage classes and affinity |
+| I | Summaries and groups | Aggregates, aliases, distinct values and groups |
+| I | NULL and three-valued logic | Missing values, logical conditions, aggregates, `COALESCE` and `NULLIF` |
+| I | Joining two tables | Matching keys, inner and left joins, SQLite version support |
+| I | Where SQL goes next | Running totals with window functions and named steps with CTEs |
+| II: SQL from R | DBI | Connections, queries, fetching and writing data |
+| II | dbplyr | Lazy queries, collecting results, joins and filtering joins |
+| II | Production R Patterns | Credentials, parameters, transactions and pooling |
+| II | DuckDB + Parquet | Querying analytical data and files |
+| Appendix | SQL and R cheatsheet | Part I clauses, functions and NULL rules, plus the R command reference |
 
-Each chapter ends with 3 hands-on exercises. Worked solutions live in [`solutions/`](solutions/) (one file per chapter, kept out of the rendered book so you can attempt first). Runnable scripts live in [`code/`](code/) (run from the repo root, offline-safe via `data/ecom.sqlite`).
+Part I chapters 1–6 include expandable exercise answers. Chapter 7 is a
+preview without exercises. Part II exercise solutions live in
+[`solutions/`](solutions/).
+
+Part I SQL chunks use `data/flights.sqlite`, built locally from the CC0
+**nycflights13** package. The generated file is over 20 MB and is ignored by
+Git. Install `nycflights13`, `DBI` and `RSQLite`, then run
+`Rscript scripts/build-db.R` from the book root. A Part I render also builds
+the file if absent. The build adds ISO `flight_date` text to `flights` and
+stores `time_hour` as UTC text in both tables that contain it.
+
+Part II keeps its existing data. The scripts in [`code/`](code/) retain
+the earlier R/ecom examples, including legacy SQL scripts; they are not
+the source for the new Part I chapters. `solutions/sql-basics.md` likewise
+retains the earlier ecom exercises; use the answers in `sql-basics.qmd`
+for the rewritten chapter.
 
 ## Zero-setup environments
 
 - **Tier 0 (primary):** Posit Cloud project — 1-click RStudio in the browser (link above; clone this repo via New Project → From Git URL).
 - **Alternative:** GitHub Codespaces — click the badge above; the `.devcontainer` boots R 4.4.2 + Quarto + packages automatically.
-- **Local:** R (4.4+) + RSQLite + Quarto CLI 1.10.18+. See Chapter 1's DuckDB note for the analytical twin.
+- **Local:** R (4.4+) + RSQLite + Quarto CLI 1.10.18+. Part I also needs nycflights13; Part II uses the packages named in its chapters.
 
 ## Develop
 
 ```bash
-quarto preview                     # live HTML preview
-quarto render                      # full book (HTML + Typst PDF + ePub into docs/)
-Rscript scripts/verify.R           # run all code/*.R as regression check
+Rscript scripts/build-db.R         # create/reuse the Part I database
+Rscript scripts/verify-flights.R   # check source data, SQLite facts and SQL examples
+Rscript scripts/verify.R           # run the legacy code/*.R examples
 ```
 
 CI renders HTML, Typst PDF, and ePub and deploys `docs/` via GitHub Pages. `master` is the production branch.
+For this restructure, render only in a temporary copy outside the worktree
+created with `git archive HEAD` plus any uncommitted changes. Run renders
+through `bash ~/.claude/bin/heavy-slot.sh ebk-sql1 <command>` so local checks
+share the build limit. Rendering in the worktree rewrites the CI-owned `docs/`.
 
 ## License
 
