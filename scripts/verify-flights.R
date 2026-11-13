@@ -244,8 +244,21 @@ stopifnot(sum(is.na(delay_values)) == 8255L, sum(is.na(flight_keys)) == 2512L,
           round(mean(replace(delay_values, is.na(delay_values), 0)), 2) == 12.33)
 message("OK: chapter 5 full truth tables, counts, aggregates, COALESCE and NULLIF")
 
+# Chapter 7: monthly counts and every cumulative count, checked against R.
+monthly_source <- as.integer(table(source_tables$flights$month))
+monthly <- DBI::dbGetQuery(con, "SELECT month, COUNT(*) AS departures, SUM(COUNT(*)) OVER (ORDER BY month ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_departures FROM flights GROUP BY month ORDER BY month")
+stopifnot(identical(monthly$month, 1:12),
+          identical(monthly$departures, monthly_source),
+          isTRUE(all.equal(monthly$running_departures, cumsum(monthly_source))),
+          identical(monthly_source[1:3], c(27004L, 24951L, 28834L)),
+          tail(monthly$running_departures, 1) == 336776L)
+cte <- DBI::dbGetQuery(con, "WITH monthly_departures AS (SELECT month, COUNT(*) AS departures FROM flights GROUP BY month) SELECT month, departures FROM monthly_departures WHERE departures >= 29000 ORDER BY month")
+stopifnot(identical(cte$month, c(7L, 8L)), identical(cte$departures, c(29425L, 29327L)),
+          inherits(try(DBI::dbGetQuery(con, "SELECT * FROM monthly_departures"), silent = TRUE), "try-error"))
+message("OK: chapter 7 monthly counts, running totals, diagrams and CTE scope")
+
 # Execute every SQL example, including expandable answers and companion solutions.
-files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-calculated.qmd", "sql-advanced.qmd", "sql-null.qmd", "joins.qmd",
+files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-calculated.qmd", "sql-advanced.qmd", "sql-null.qmd", "joins.qmd", "sql-next.qmd",
            "solutions/sql-advanced.md", "solutions/joins.md")
 total <- 0L
 for (file in files) {
