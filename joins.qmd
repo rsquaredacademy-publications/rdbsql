@@ -465,7 +465,9 @@ For filtering joins with R verbs, see
 > - **A right-table filter in `WHERE` preserves unmatched rows.** A
 >   condition such as `p.year >= 2000` removes them.
 
-## Try it {#exercises}
+<span id="exercises"></span>
+
+## Try it
 
 Attempt each question before opening its answer. Keep the matching key
 visible when checking individual rows.

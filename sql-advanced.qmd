@@ -478,7 +478,9 @@ the group definition, or the threshold.
 > - **`WHERE` can test `AVG(dep_delay)` or `COUNT(*)`.** Put group
 >   thresholds in `HAVING`, after `GROUP BY`.
 
-## Try it {#exercises}
+<span id="exercises"></span>
+
+## Try it
 
 Attempt each question before opening the answer. Describe what one
 result row represents as well as writing the SQL.
