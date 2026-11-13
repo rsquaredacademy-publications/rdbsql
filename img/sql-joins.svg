@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="395" viewBox="0 0 1100 395" role="img" aria-labelledby="title desc">
+  <title id="title">Look up an airline for each departure</title>
+  <desc id="desc">Three January 1 departures scheduled by 05:40 look up airline names using carrier equality. UA 1545 and UA 1714 both match the same UA airline row. AA 1141 matches the AA row. The result still contains three departures.</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#526575"/></marker></defs>
+  <rect width="1100" height="395" fill="#fff"/>
+  <g font-family="Arial, sans-serif" fill="#172b3a">
+    <g font-size="21" font-weight="bold"><text x="20" y="35">Departures</text><text x="390" y="35">Airline lookup</text><text x="720" y="35">Joined rows</text></g>
+    <g font-size="16"><text x="20" y="65">One match for each carrier code</text><text x="390" y="65">One stored row per code</text><text x="720" y="65">One name per departure</text></g>
+    <rect x="20" y="90" width="260" height="36" rx="4" fill="#e9edf1"/>
+    <g font-size="16" font-weight="bold"><text x="34" y="114">Carrier</text><text x="130" y="114">Flight</text><text x="212" y="114">Origin</text></g>
+    <rect x="20" y="140" width="260" height="44" rx="4" fill="#dcecf9"/>
+    <rect x="20" y="210" width="260" height="44" rx="4" fill="#dcecf9"/>
+    <rect x="20" y="280" width="260" height="44" rx="4" fill="#dcefe6"/>
+    <g font-size="18"><text x="34" y="168">UA</text><text x="130" y="168">1545</text><text x="212" y="168">EWR</text><text x="34" y="238">UA</text><text x="130" y="238">1714</text><text x="212" y="238">LGA</text><text x="34" y="308">AA</text><text x="130" y="308">1141</text><text x="212" y="308">JFK</text></g>
+    <rect x="390" y="145" width="245" height="65" rx="6" fill="#dcecf9"/>
+    <rect x="390" y="270" width="245" height="65" rx="6" fill="#dcefe6"/>
+    <g font-size="17"><text x="405" y="170" font-weight="bold">UA</text><text x="405" y="195">United Air Lines Inc.</text><text x="405" y="295" font-weight="bold">AA</text><text x="405" y="320">American Airlines Inc.</text></g>
+    <g fill="none" stroke="#526575" stroke-width="2" marker-end="url(#arrow)"><path d="M280 162 L375 170"/><path d="M280 232 L375 185"/><path d="M280 302 H375"/></g>
+    <text x="301" y="132" font-size="16">ON</text>
+    <rect x="720" y="90" width="360" height="36" rx="4" fill="#e9edf1"/>
+    <g font-size="16" font-weight="bold"><text x="733" y="114">Flight</text><text x="835" y="114">Airline name</text></g>
+    <rect x="720" y="140" width="360" height="44" rx="4" fill="#dcecf9"/>
+    <rect x="720" y="210" width="360" height="44" rx="4" fill="#dcecf9"/>
+    <rect x="720" y="280" width="360" height="44" rx="4" fill="#dcefe6"/>
+    <g font-size="17"><text x="733" y="168">UA 1545</text><text x="835" y="168">United Air Lines Inc.</text><text x="733" y="238">UA 1714</text><text x="835" y="238">United Air Lines Inc.</text><text x="733" y="308">AA 1141</text><text x="835" y="308">American Airlines Inc.</text></g>
+    <g fill="none" stroke="#526575" stroke-width="2" marker-end="url(#arrow)"><path d="M635 167 L705 162"/><path d="M635 190 L705 232"/><path d="M635 302 H705"/></g>
+    <text x="20" y="375" font-size="17">January 1, 2013 · scheduled departure time ≤ 540 · both UA departures reuse the same lookup row.</text>
+  </g>
+</svg>

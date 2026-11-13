@@ -117,6 +117,44 @@ stopifnot(identical(july$carrier, expected_carriers),
           isTRUE(all.equal(july$delay, as.numeric(july_means[july$carrier]))))
 message("OK: chapter 4 counts, NULL aggregates, diagram, GROUP BY and HAVING")
 
+# Chapter 6: verify lookup keys and every match/no-match claim with this RSQLite.
+for (table in c("airlines", "planes")) {
+  key <- if (table == "airlines") "carrier" else "tailnum"
+  keys <- DBI::dbGetQuery(con, sprintf(
+    "SELECT COUNT(*) AS rows, COUNT(%s) AS known, COUNT(DISTINCT %s) AS distinct_keys FROM %s",
+    key, key, table))
+  stopifnot(keys$rows == keys$known, keys$rows == keys$distinct_keys)
+}
+check_query("SELECT COUNT(*) FROM flights f INNER JOIN planes p ON f.tailnum = p.tailnum", 284170L)
+check_query("SELECT COUNT(*) FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum WHERE p.tailnum IS NULL", 52606L)
+check_query("SELECT COUNT(*) FROM flights WHERE tailnum IS NULL", 2512L)
+check_query("SELECT COUNT(*) FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum WHERE p.tailnum IS NULL AND f.tailnum IS NOT NULL", 50094L)
+check_query("SELECT COUNT(DISTINCT f.tailnum) FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum WHERE p.tailnum IS NULL AND f.tailnum IS NOT NULL", 721L)
+# Independent package-side match check, including the missing identifiers.
+flight_keys <- source_tables$flights$tailnum
+plane_keys <- source_tables$planes$tailnum
+package_matches <- !is.na(flight_keys) & flight_keys %in% plane_keys
+stopifnot(sum(package_matches) == 284170L, sum(!package_matches) == 52606L,
+          sum(is.na(flight_keys)) == 2512L,
+          sum(!is.na(flight_keys) & !package_matches) == 50094L)
+airline_picture <- DBI::dbGetQuery(con, "SELECT f.carrier, f.flight, a.name FROM flights f INNER JOIN airlines a ON f.carrier = a.carrier WHERE f.flight_date = '2013-01-01' AND f.sched_dep_time <= 540 ORDER BY f.sched_dep_time, f.carrier, f.flight, f.origin")
+stopifnot(identical(airline_picture$carrier, c("UA", "UA", "AA")),
+          identical(airline_picture$flight, c(1545L, 1714L, 1141L)),
+          identical(airline_picture$name, c("United Air Lines Inc.", "United Air Lines Inc.", "American Airlines Inc.")))
+unlisted <- DBI::dbGetQuery(con, "SELECT f.tailnum, p.tailnum AS matched_tailnum, p.model FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum WHERE f.flight_date = '2013-01-01' AND f.carrier = 'AA' AND f.flight = 301 AND f.origin = 'LGA'")
+stopifnot(nrow(unlisted) == 1L, unlisted$tailnum == "N3ALAA",
+          is.na(unlisted$matched_tailnum), is.na(unlisted$model))
+check_query("SELECT COUNT(*) FROM flights f INNER JOIN planes p ON f.tailnum = p.tailnum WHERE p.year IS NULL", 5306L)
+check_query("SELECT COUNT(*) FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum WHERE p.year IS NULL", 57912L)
+check_query("SELECT COUNT(*) FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum WHERE p.year >= 2000", 192846L)
+check_query("SELECT COUNT(*) FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum AND p.year >= 2000", 336776L)
+check_query("SELECT COUNT(p.tailnum) FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum AND p.year >= 2000", 192846L)
+check_query("SELECT COUNT(*) FROM flights f INNER JOIN planes p ON f.tailnum = p.tailnum WHERE f.tailnum IS NULL", 0L)
+stopifnot(inherits(try(DBI::dbGetQuery(con, "SELECT carrier FROM flights f INNER JOIN airlines a ON f.carrier = a.carrier LIMIT 1"), silent = TRUE), "try-error"))
+# Omitted ON is accepted; LIMIT bounds the intentionally incorrect preview.
+stopifnot(nrow(DBI::dbGetQuery(con, "SELECT f.carrier, a.name FROM flights f INNER JOIN airlines a LIMIT 3")) == 3L)
+message("OK: chapter 6 unique keys, diagram, missing matches, attributes and ON/WHERE")
+
 # Execute every SQL example, including expandable answers and companion solutions.
 files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-advanced.qmd", "joins.qmd",
            "solutions/sql-advanced.md", "solutions/joins.md")
