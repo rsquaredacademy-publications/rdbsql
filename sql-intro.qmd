@@ -1,0 +1,279 @@
+# Databases, tables and queries {#sec-sql-intro}
+
+```{r sql-intro-setup, include=FALSE}
+source("scripts/sql-setup.R")
+```
+
+## Learning objectives
+
+In this chapter, we will learn to:
+
+- recognise databases, tables, rows, columns and keys
+- describe a question that SQL can answer
+- read a small query and its result
+- find our way around the flight data
+- choose a way to run the examples
+
+## What is a database?
+
+A database is an organised collection of data. In a relational database, we
+keep data in tables. Each table describes one kind of thing, such as a
+flight, an airport or an airline.
+
+A **row** describes one observation. A **column** describes an attribute of
+that observation. In our `flights` table, a row describes a scheduled flight
+departure. The columns include its carrier, origin, destination and delay.
+
+Let us look at a few columns from the table. We will explain the query
+line by line shortly:
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight, origin, dest
+FROM flights
+ORDER BY flight_date, carrier, flight, origin
+LIMIT 5;
+```
+
+The headings are column names. Each line below them is a result row. The
+carrier is a short code, such as `AA`. The flight number alone is not a
+unique identifier: an airline can use the same number on different days.
+
+The meaning of one row matters before we do any analysis. A flight row
+does not describe a passenger, a ticket or an airline's daily total. We
+cannot answer a question about ticket prices from columns that only
+record flight movements.
+
+### Keys connect tables
+
+A **key** identifies a row. In `airlines`, the `carrier` column identifies
+one airline. Each carrier code occurs once in that table. In `flights`,
+the same carrier code can occur many times because an airline operates
+many flights.
+
+This picture shows the tables and the columns we use to connect them.
+The boxes describe their structure; they are not query results.
+
+```{mermaid}
+flowchart LR
+  F["flights<br/>one scheduled departure<br/>carrier · origin · dest · tailnum · time_hour"]
+  A["airlines<br/>one airline<br/>key: carrier"]
+  P["planes<br/>one aircraft<br/>key: tailnum"]
+  AP["airports<br/>one airport<br/>key: faa"]
+  W["weather<br/>one origin and hour<br/>origin + time_hour"]
+  F -->|carrier| A
+  F -->|tailnum| P
+  F -->|origin or dest = faa| AP
+  F -->|origin + time_hour| W
+```
+
+Keeping the airline name in one table saves us from repeating the full
+name on every flight row. We can look up the name using the shared code.
+We will combine two tables in @sec-joins.
+
+A useful distinction is between a key and a row number on screen. Sorting
+a result changes its row positions. It does not change the airline's
+carrier code. Whenever we need to identify an observation, we use its
+data values rather than its position in a display.
+
+## Why SQL?
+
+SQL stands for Structured Query Language. We use it to describe the data
+we want from a database. A **query** is a request for a result, usually
+written as a statement beginning with `SELECT`.
+
+Suppose we want five airline names, in carrier-code order. We name the
+columns, name the table, request an order and limit the result:
+
+```{sql, connection=con}
+SELECT carrier, name
+FROM airlines
+ORDER BY carrier
+LIMIT 5;
+```
+
+We describe the result we need. The database chooses how to find it. We
+do not write a loop to visit every airline and build the answer ourselves.
+This makes SQL useful for questions that involve selecting, filtering,
+sorting, summarising and combining tables.
+
+SQL also lets us request a small result from a large table. We can ask
+for a few columns and matching rows before bringing data into another
+tool. In Part II, we will use R to send these requests and work with the
+results.
+
+The examples in Part I read data. Running these `SELECT` queries leaves
+the stored tables intact. Changing a query changes the result we see,
+so we can try another question and compare the answers.
+
+## How a query reads and how it runs
+
+Let us read the airline query from top to bottom:
+
+| Clause | What we ask for |
+|:--|:--|
+| `SELECT carrier, name` | Return these two columns |
+| `FROM airlines` | Read the airlines table |
+| `ORDER BY carrier` | Put the result in carrier-code order |
+| `LIMIT 5` | Return at most five rows |
+
+This is the order we **write**. A useful way to understand the result is
+to start with `FROM`: take the table, choose the columns, sort the rows,
+then keep five. In the next chapter, `WHERE` will keep matching rows
+before we choose the displayed columns.
+
+This is a logical explanation of the answer, not a promise about the
+database's physical steps. SQLite may use a faster route internally.
+We only need the written clause order and the meaning of each clause
+to start asking questions.
+
+The result is another table, with rows and columns. It is not a saved
+replacement for `airlines`. A later query can request different columns
+from the same source table.
+
+## The book's data
+
+We use the public [nycflights13 data](https://nycflights13.tidyverse.org/),
+released under CC0. It records 336,776 scheduled departures from the
+New York City airports EWR, JFK and LGA in 2013. The package also provides
+airline, airport, aircraft and hourly weather information.
+
+| Table | One row describes | Useful columns |
+|:--|:--|:--|
+| `flights` | A scheduled departure | `carrier`, `flight`, `origin`, `dest`, `dep_delay` |
+| `airlines` | An airline | `carrier`, `name` |
+| `airports` | An airport | `faa`, `name`, `lat`, `lon` |
+| `planes` | An aircraft | `tailnum`, `manufacturer`, `model` |
+| `weather` | Weather at an origin and hour | `origin`, `time_hour`, `temp`, `wind_speed` |
+
+Departure delay, `dep_delay`, is measured in minutes. A positive value
+means a late departure; a negative value means an early departure.
+Distance is measured in miles. Airport and carrier codes are text even
+though they are short.
+
+Some values are missing. A missing departure delay is not a zero-minute
+delay. SQLite represents missing values as `NULL`; the rendered tables
+may display them as `NA`. We will return to missing values in the planned
+chapter on `NULL`.
+
+Our build script preserves the five source tables and adds `flight_date`
+to `flights`. It combines `year`, `month` and `day` into text such as
+`2013-01-01`. The shared `time_hour` columns are stored as UTC timestamp
+text. Use `flight_date` for the local departure calendar date.
+
+## How to follow along
+
+The tables printed below SQL examples are computed when the book is
+rendered. These pages currently show static examples. There is no browser
+SQL cell to activate on this page.
+
+For browser practice, use the [Intro to SQL course]({{< var sql_course_url >}}).
+It has its own data. Practise the same clauses there, using the table and
+column names supplied in each lesson.
+
+To run this book's examples locally, start in the book's source directory.
+With R installed, install the data and database packages once:
+
+```{r sql-intro-install, eval=FALSE}
+install.packages(c("nycflights13", "DBI", "RSQLite"))
+```
+
+Then build the database from a terminal:
+
+```{.bash}
+Rscript scripts/build-db.R
+```
+
+The script creates `data/flights.sqlite` from the installed package. It
+reuses an existing file. To rebuild after changing the script or source
+package, remove that generated file and run the script again. Rendering
+a Part I chapter also builds the file when it is absent.
+
+You can open the file in **DB Browser for SQLite**. Choose **Open Database**,
+select `data/flights.sqlite`, then use **Execute SQL**. Paste one query,
+including its final semicolon, and run it. Compare the column headings
+and values with the book's result.
+
+R users can connect to the same file with DBI and RSQLite. Part II explains
+that workflow. In this part, focus on the SQL inside the example: every
+SQL block runs through knitr's SQL engine against the shared file.
+
+## Common mistakes
+
+- **Guessing a table name.** We have `flights`, not `flight`. Read the
+  table list before writing `FROM`.
+- **Treating a display position as a key.** The first row can change with
+  the sort order. A key identifies the observation itself.
+- **Requesting an entire large table to take a look.** Choose a few
+  columns and use `LIMIT` for a preview.
+- **Assuming a query saves its result over the source.** Our `SELECT`
+  examples return data without replacing the stored table.
+
+## Try it
+
+1. What does one row of `flights` describe?
+
+<details>
+<summary>Answer</summary>
+
+One scheduled flight departure. It does not describe one passenger or
+one airline.
+
+</details>
+
+2. Which table translates a carrier code into an airline name?
+
+<details>
+<summary>Answer</summary>
+
+`airlines`. Its `carrier` column identifies the airline, and `name`
+contains the full name.
+
+</details>
+
+3. Run a query that returns three carrier codes and names in code order.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT carrier, name
+FROM airlines
+ORDER BY carrier
+LIMIT 3;
+```
+
+</details>
+
+4. Does `LIMIT 3` mean the database table now contains only three rows?
+
+<details>
+<summary>Answer</summary>
+
+No. It limits this query's result. The source table keeps all its rows.
+
+</details>
+
+5. Why is `flight` alone unsuitable as a key for the flights table?
+
+<details>
+<summary>Answer</summary>
+
+A flight number can appear on many dates and for different carriers.
+Its value does not uniquely identify a departure.
+
+</details>
+
+## Key points
+
+- Tables contain rows of observations and columns of attributes.
+- Keys identify observations and help connect related tables.
+- A query describes the result we want from the stored data.
+- We use the same five-table SQLite file throughout Part I.
+
+Next: [Selecting, sorting and filtering](sql-basics.qmd).
+
+Practise in [Intro to SQL, lesson 0]({{< var sql_course_url >}}).
+
+```{r sql-intro-close, include=FALSE}
+DBI::dbDisconnect(con)
+```
