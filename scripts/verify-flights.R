@@ -58,7 +58,12 @@ check_query("SELECT carrier FROM airlines ORDER BY carrier LIMIT 3", c("9E", "AA
 check_query("SELECT carrier FROM airlines ORDER BY carrier ASC LIMIT 3", c("9E", "AA", "AS"))
 renamed <- DBI::dbGetQuery(con, "SELECT carrier name FROM airlines ORDER BY carrier LIMIT 1")
 stopifnot(identical(names(renamed), "name"), identical(renamed$name, "9E"))
+stopifnot(identical(names(DBI::dbGetQuery(con, "SELECT name, carrier FROM airlines LIMIT 1")),
+                    c("name", "carrier")))
+stopifnot(nrow(DBI::dbGetQuery(con, "SELECT carrier FROM airlines LIMIT 100")) == 16L)
+stopifnot(nrow(DBI::dbGetQuery(con, "SELECT carrier FROM airlines WHERE carrier = 'missing' LIMIT 5")) == 0L)
 stopifnot(is.na(DBI::dbGetQuery(con, "SELECT dep_delay FROM flights ORDER BY dep_delay LIMIT 1")[[1]]))
+stopifnot(is.na(DBI::dbGetQuery(con, "SELECT dep_delay FROM flights ORDER BY dep_delay DESC LIMIT 1 OFFSET 336775")[[1]]))
 check_query("SELECT dep_delay FROM flights ORDER BY dep_delay DESC LIMIT 1", 1301L)
 stopifnot(inherits(try(DBI::dbGetQuery(con, "SELECT carrier FROM airlines LIMIT 5 ORDER BY carrier"), silent = TRUE), "try-error"))
 stopifnot(inherits(try(DBI::dbGetQuery(con, "SELECT carrier FROM airlines WHERE carrier = JFK"), silent = TRUE), "try-error"))
