@@ -129,7 +129,7 @@ The next UA departure looks up the same airline row. Matching it once
 does not use up the row. The AA departure looks up the AA row instead.
 This picture follows those three departures:
 
-![Three January 1 departures look up two airline rows: both UA departures receive United's name, and the AA departure receives American's name.](img/sql-joins.svg)
+![](img/sql-joins.svg){fig-alt="Three January 1 departures look up two airline rows: both UA departures receive United's name, and the AA departure receives American's name."}
 
 We can run the small example shown in the picture:
 

@@ -305,7 +305,7 @@ column, summarize within each group, then combine those summaries into
 one result table. This is a way to read the query, not a description of
 how SQLite must physically store or move rows.
 
-![Four early January 1 departures split into three origin groups, giving counts of one for EWR, two for JFK and one for LGA.](img/sql-groups.svg)
+![](img/sql-groups.svg){fig-alt="Four early January 1 departures split into three origin groups, giving counts of one for EWR, two for JFK and one for LGA."}
 
 The picture uses four actual departures. We can inspect the input rows
 before summarizing them:
