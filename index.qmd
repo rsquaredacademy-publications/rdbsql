@@ -5,10 +5,8 @@ image-alt: "R, Databases & SQL — connect R to SQLite, query with dbplyr and SQ
 
 # Preface {.unnumbered}
 
-*Last verified: 2026-09-26 · R 4.5.2 · DBI · dbplyr 2.6.0 · RSQLite 2.4.6 · duckdb.*
-
-New here? Grab the [one-page DBI cheatsheet](cheatsheet/dbi-cheatsheet.pdf),
-then work Chapters 1–5 in order — runnable code for each chapter lives in `code/`.
+We use SQL to ask questions of tables, then use R to work with databases.
+No R experience is needed for Part I. R users who know SQL: start at Part II.
 
 ```{r fig.align='center', echo=FALSE, out.width="60%"}
 knitr::include_graphics('img/rdbsql.png')
@@ -24,10 +22,25 @@ This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAl
 
 ## Structure of the book {.unnumbered}
 
-Chapter @sec-dbi introduces the **DBI** package. Chapter @sec-dbplyr explores
-data wrangling within database using the **dplyr** package. Chapters @sec-sqlbasics
-and @sec-sql2 introduce basic and advanced SQL. Chapter @sec-joins combines
-tables with JOINs in SQL and dbplyr.
+**Part I: SQL** is the SQL-first companion to the free
+[Intro to SQL course]({{< var sql_course_url >}}). We start with databases,
+tables and queries in @sec-sql-intro. We select, sort and filter rows in
+@sec-sqlbasics, summarise groups in @sec-sql2, and combine tables in @sec-joins.
+We use public flight data from **nycflights13**. The SQL examples run directly
+against SQLite, and the book shows their results.
+
+The full Part I outline reserves chapters 3, 5 and 7 for calculated columns
+and SQLite types, missing values, and where SQL goes next. These chapters
+are planned; the current navigation contains the available chapters only.
+
+**Part II: SQL from R** starts with **DBI** in @sec-dbi and **dbplyr** in
+@sec-dbplyr, including joins with dplyr verbs. The production and DuckDB
+chapters follow. These chapters show how to connect, send queries and bring
+results into R. Their existing examples use their own data.
+
+The cheatsheet is an appendix. The [one-page DBI cheatsheet](cheatsheet/dbi-cheatsheet.pdf)
+is also available for R users. The existing Part II scripts live in `code/`;
+@sec-sql-intro explains how to build the Part I database and follow along.
 
 ## Software information {.unnumbered}
 

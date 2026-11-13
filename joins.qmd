@@ -15,8 +15,6 @@ In this chapter, we will learn to:
 - combine rows from two tables with `INNER JOIN`
 - keep unmatched rows with `LEFT JOIN`
 - avoid the SQLite `RIGHT` / `FULL OUTER JOIN` trap
-- do the same joins from R with dbplyr `inner_join()` / `left_join()`
-- filter with `semi_join()` and `anti_join()`
 
 We will use the following R packages:
 
@@ -110,55 +108,8 @@ When in doubt, `LEFT JOIN` is the only outer join you need for this book.
 
 ## JOINs with dbplyr
 
-The same joins work from R without writing SQL. Reference both tables and use
-the dplyr join verbs:
-
-```{r join-dbplyr, message=FALSE}
-customers <- dplyr::tbl(con, "customers")
-orders <- dplyr::tbl(con, "orders")
-
-inner_join(customers, orders, by = "customer_id")
-```
-
-Use `show_query()` to see the SQL dbplyr generates -- it is the `INNER JOIN`
-you just wrote by hand:
-
-```{r join-show-inner, collapse=TRUE}
-q_inner <- inner_join(customers, orders, by = "customer_id")
-dplyr::show_query(q_inner)
-```
-
-The left join works the same way:
-
-```{r join-show-left, collapse=TRUE}
-q_left <- left_join(customers, orders, by = "customer_id")
-dplyr::show_query(q_left)
-```
-
-## semi_join and anti_join
-
-Two filtering joins have no direct SQL keyword but are everyday tools:
-
-- `semi_join()` keeps rows of `customers` that **have** a match in `orders`
-  (14 customers). The generated SQL uses `WHERE EXISTS`.
-- `anti_join()` keeps rows of `customers` that **lack** a match in `orders`
-  (the same 6 customers from the `LEFT JOIN` check above). The generated SQL
-  uses `WHERE NOT EXISTS`.
-
-```{r join-semi, collapse=TRUE}
-q_semi <- semi_join(customers, orders, by = "customer_id")
-dplyr::show_query(q_semi)
-dplyr::collect(q_semi)
-```
-
-```{r join-anti, collapse=TRUE}
-q_anti <- anti_join(customers, orders, by = "customer_id")
-dplyr::show_query(q_anti)
-dplyr::collect(q_anti)
-```
-
-Rule of thumb: use `semi_join()` / `anti_join()` when you want to filter one
-table by membership in another without adding the other table's columns.
+For joins with R verbs, see [JOINs with dbplyr](dbplyr.qmd#joins-with-dbplyr)
+and [semi_join and anti_join](dbplyr.qmd#semi_join-and-anti_join) in Part II.
 
 ```{r join-close}
 dbDisconnect(con)
@@ -167,7 +118,8 @@ dbDisconnect(con)
 ## Exercises
 
 1. List the `customer_id` and `country` of customers who placed no orders.
-   Write it both as a `LEFT JOIN ... IS NULL` query and as an `anti_join()`.
+   Write a `LEFT JOIN ... IS NULL` query; for the R version, see
+   [filtering joins in Part II](dbplyr.qmd#semi_join-and-anti_join).
 2. Compute total order `amount` per customer (highest first) with an
    `INNER JOIN` + `GROUP BY`. Which customer spent the most?
 3. Find the orphan order: which `order_id` points at a non-existent customer?

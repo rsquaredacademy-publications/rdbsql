@@ -100,6 +100,68 @@ the data and store it in a tibble and you can use it for any further analysis.
 dplyr::collect(avg_time)
 ```
 
+We can also combine tables with R verbs, as in the SQL joins in @sec-joins.
+For the examples below, let us load the same customers and orders into this connection:
+
+```{r dbplyr-join-setup, include=FALSE}
+join_source <- DBI::dbConnect(RSQLite::SQLite(), "data/ecom.sqlite")
+DBI::dbWriteTable(con, "customers", DBI::dbReadTable(join_source, "customers"))
+DBI::dbWriteTable(con, "orders", DBI::dbReadTable(join_source, "orders"))
+DBI::dbDisconnect(join_source)
+```
+
+## JOINs with dbplyr
+
+The same joins work from R without writing SQL. Reference both tables and use
+the dplyr join verbs:
+
+```{r join-dbplyr, message=FALSE}
+customers <- dplyr::tbl(con, "customers")
+orders <- dplyr::tbl(con, "orders")
+
+inner_join(customers, orders, by = "customer_id")
+```
+
+Use `show_query()` to see the SQL dbplyr generates -- it is the `INNER JOIN`
+you just wrote by hand:
+
+```{r join-show-inner, collapse=TRUE}
+q_inner <- inner_join(customers, orders, by = "customer_id")
+dplyr::show_query(q_inner)
+```
+
+The left join works the same way:
+
+```{r join-show-left, collapse=TRUE}
+q_left <- left_join(customers, orders, by = "customer_id")
+dplyr::show_query(q_left)
+```
+
+## semi_join and anti_join
+
+Two filtering joins have no direct SQL keyword but are everyday tools:
+
+- `semi_join()` keeps rows of `customers` that **have** a match in `orders`
+  (14 customers). The generated SQL uses `WHERE EXISTS`.
+- `anti_join()` keeps rows of `customers` that **lack** a match in `orders`
+  (the same 6 customers from the `LEFT JOIN` check above). The generated SQL
+  uses `WHERE NOT EXISTS`.
+
+```{r join-semi, collapse=TRUE}
+q_semi <- semi_join(customers, orders, by = "customer_id")
+dplyr::show_query(q_semi)
+dplyr::collect(q_semi)
+```
+
+```{r join-anti, collapse=TRUE}
+q_anti <- anti_join(customers, orders, by = "customer_id")
+dplyr::show_query(q_anti)
+dplyr::collect(q_anti)
+```
+
+Rule of thumb: use `semi_join()` / `anti_join()` when you want to filter one
+table by membership in another without adding the other table's columns.
+
 It is good practice to close the connection when you are done:
 
 ```{r dbply-close}

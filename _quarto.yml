@@ -37,15 +37,23 @@ book:
   chapters:
     - index.qmd
     - about.qmd
-    - dbi.qmd
-    - dbplyr.qmd
-    - sql-basics.qmd
-    - sql-advanced.qmd
-    - joins.qmd
-    - cheatsheet.qmd
+    - part: "Part I: SQL"
+      chapters:
+        - sql-intro.qmd
+        - sql-basics.qmd
+        # Chapter 3: Calculated columns and SQLite types (planned)
+        - sql-advanced.qmd
+        # Chapter 5: NULL and three-valued logic (planned)
+        - joins.qmd
+        # Chapter 7: Where SQL goes next (planned)
+    - part: "Part II: SQL from R"
+      chapters:
+        - dbi.qmd
+        - dbplyr.qmd
+        - production.qmd
+        - duckdb.qmd
   appendices:
-    - production.qmd
-    - duckdb.qmd
+    - cheatsheet.qmd
   downloads: [pdf, epub]
   # Filename for the whole-book PDF/ePub. Must be set here rather than renamed
   # after the render: Quarto bakes this name into the landing page's download
