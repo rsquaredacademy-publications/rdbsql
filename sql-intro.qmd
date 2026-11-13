@@ -53,18 +53,7 @@ many flights.
 This picture shows the tables and the columns we use to connect them.
 The boxes describe their structure; they are not query results.
 
-```{mermaid}
-flowchart LR
-  F["flights<br/>one scheduled departure<br/>carrier · origin · dest · tailnum · time_hour"]
-  A["airlines<br/>one airline<br/>key: carrier"]
-  P["planes<br/>one aircraft<br/>key: tailnum"]
-  AP["airports<br/>one airport<br/>key: faa"]
-  W["weather<br/>one origin and hour<br/>origin + time_hour"]
-  F -->|carrier| A
-  F -->|tailnum| P
-  F -->|origin or dest = faa| AP
-  F -->|origin + time_hour| W
-```
+![](img/sql-tables.svg){fig-alt="Flights connects to airlines by carrier, planes by tail number, airports by origin or destination, and weather by origin and hour."}
 
 Keeping the airline name in one table saves us from repeating the full
 name on every flight row. We can look up the name using the shared code.

@@ -309,14 +309,7 @@ not simply evaluate these words from left to right.
 This picture groups the unbracketed condition. Read each box as one
 condition and the arrows as how their truth values combine:
 
-```{mermaid}
-flowchart LR
-  J["origin = 'JFK'"] --> O[OR]
-  L["origin = 'LGA'"] --> A[AND]
-  D["dep_delay > 60"] --> A
-  A --> O
-  O --> K["Keep the row if true"]
-```
+![](img/sql-precedence.svg){fig-alt="The LGA and delay tests combine with AND before OR combines that result with the JFK test."}
 
 For the operators in this section, comparisons bind before `NOT`, then
 `AND`, then `OR`. Use brackets around the alternatives even when the
