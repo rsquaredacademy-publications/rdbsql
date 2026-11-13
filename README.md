@@ -16,17 +16,20 @@ dbplyr. R users who know SQL can start at Part II.
 |:--|:--|:--|
 | I: SQL | Databases, tables and queries | Tables, keys, queries, flight data and local setup |
 | I | Selecting, sorting and filtering | `SELECT`, `LIMIT`, `ORDER BY`, `WHERE`, logical conditions, `IN`, `BETWEEN`, `LIKE` |
+| I | Calculated columns and SQLite types | Arithmetic, rounding, integer division, storage classes and affinity |
 | I | Summaries and groups | Aggregates, aliases, distinct values and groups |
+| I | NULL and three-valued logic | Missing values, logical conditions, aggregates, `COALESCE` and `NULLIF` |
 | I | Joining two tables | Matching keys, inner and left joins, SQLite version support |
+| I | Where SQL goes next | Running totals with window functions and named steps with CTEs |
 | II: SQL from R | DBI | Connections, queries, fetching and writing data |
 | II | dbplyr | Lazy queries, collecting results, joins and filtering joins |
 | II | Production R Patterns | Credentials, parameters, transactions and pooling |
 | II | DuckDB + Parquet | Querying analytical data and files |
-| Appendix | DBI Cheat Sheet | One-page R command reference |
+| Appendix | SQL and R cheatsheet | Part I clauses, functions and NULL rules, plus the R command reference |
 
-Part I outline slots 3, 5 and 7 are comments only until those chapters are
-written. The Part I chapters (1, 2, 4 and 6) include expandable exercise
-answers; Part II exercise solutions live in [`solutions/`](solutions/).
+Part I chapters 1–6 include expandable exercise answers. Chapter 7 is a
+preview without exercises. Part II exercise solutions live in
+[`solutions/`](solutions/).
 
 Part I SQL chunks use `data/flights.sqlite`, built locally from the CC0
 **nycflights13** package. The generated file is over 20 MB and is ignored by

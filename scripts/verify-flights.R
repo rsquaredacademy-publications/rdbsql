@@ -258,7 +258,7 @@ stopifnot(identical(cte$month, c(7L, 8L)), identical(cte$departures, c(29425L, 2
 message("OK: chapter 7 monthly counts, running totals, diagrams and CTE scope")
 
 # Execute every SQL example, including expandable answers and companion solutions.
-files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-calculated.qmd", "sql-advanced.qmd", "sql-null.qmd", "joins.qmd", "sql-next.qmd",
+files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-calculated.qmd", "sql-advanced.qmd", "sql-null.qmd", "joins.qmd", "sql-next.qmd", "cheatsheet.qmd",
            "solutions/sql-advanced.md", "solutions/joins.md")
 total <- 0L
 for (file in files) {
