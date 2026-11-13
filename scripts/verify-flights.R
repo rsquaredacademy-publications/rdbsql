@@ -78,6 +78,13 @@ check_query("SELECT COUNT(dep_delay) FROM flights", 328521L)
 check_query("SELECT COUNT(*) - COUNT(dep_delay) FROM flights", 8255L)
 check_query("SELECT COUNT(DISTINCT carrier) FROM flights", 16L)
 check_query("SELECT COUNT(DISTINCT tailnum) FROM flights", 4043L)
+numeric_summary <- DBI::dbGetQuery(con, "SELECT SUM(dep_delay) AS total, AVG(dep_delay) AS average, MIN(dep_delay) AS minimum, MAX(dep_delay) AS maximum FROM flights")
+delay_values <- source_tables$flights$dep_delay
+stopifnot(isTRUE(all.equal(as.numeric(numeric_summary[1, ]),
+  c(sum(delay_values, na.rm = TRUE), mean(delay_values, na.rm = TRUE),
+    min(delay_values, na.rm = TRUE), max(delay_values, na.rm = TRUE)))))
+nonpositive_counts <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS rows, COUNT(dep_delay) AS known FROM flights WHERE dep_delay <= 0")
+stopifnot(nonpositive_counts$rows == nonpositive_counts$known)
 stopifnot(DBI::dbGetQuery(con, "SELECT COUNT(*) FROM flights WHERE dep_delay = 0")[[1]] > 0L,
           DBI::dbGetQuery(con, "SELECT COUNT(*) FROM flights WHERE dep_delay < 0")[[1]] > 0L)
 for (filter in c("dep_delay IS NULL", "origin = 'XXX'")) {
