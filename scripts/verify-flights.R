@@ -72,6 +72,51 @@ check_query("SELECT COUNT(*) FROM airlines a RIGHT JOIN flights f ON a.carrier =
 check_query("SELECT COUNT(*) FROM airlines a FULL OUTER JOIN flights f ON a.carrier = f.carrier", nrow(source_tables$flights))
 check_query("SELECT COUNT(*) FROM flights f LEFT JOIN planes p ON f.tailnum = p.tailnum", nrow(source_tables$flights))
 
+# Chapter 4: row counts, missing values, distinct values and group semantics.
+check_query("SELECT COUNT(*) FROM flights", 336776L)
+check_query("SELECT COUNT(dep_delay) FROM flights", 328521L)
+check_query("SELECT COUNT(*) - COUNT(dep_delay) FROM flights", 8255L)
+check_query("SELECT COUNT(DISTINCT carrier) FROM flights", 16L)
+check_query("SELECT COUNT(DISTINCT tailnum) FROM flights", 4043L)
+stopifnot(DBI::dbGetQuery(con, "SELECT COUNT(*) FROM flights WHERE dep_delay = 0")[[1]] > 0L,
+          DBI::dbGetQuery(con, "SELECT COUNT(*) FROM flights WHERE dep_delay < 0")[[1]] > 0L)
+for (filter in c("dep_delay IS NULL", "origin = 'XXX'")) {
+  result <- DBI::dbGetQuery(con, paste("SELECT COUNT(*) AS rows, COUNT(dep_delay) AS known,",
+    "SUM(dep_delay) AS total, AVG(dep_delay) AS average, MIN(dep_delay) AS minimum,",
+    "MAX(dep_delay) AS maximum FROM flights WHERE", filter))
+  stopifnot(nrow(result) == 1L, result$known == 0L,
+            all(is.na(result[c("total", "average", "minimum", "maximum")])))
+  stopifnot(result$rows == if (filter == "dep_delay IS NULL") 8255L else 0L)
+}
+stopifnot(nrow(DBI::dbGetQuery(con, "SELECT origin, COUNT(*) FROM flights WHERE origin = 'XXX' GROUP BY origin")) == 0L)
+averages <- DBI::dbGetQuery(con, "SELECT AVG(dep_delay) AS builtin, SUM(dep_delay)*1.0/COUNT(dep_delay) AS manual FROM flights WHERE origin = 'JFK'")
+stopifnot(isTRUE(all.equal(averages$builtin, averages$manual)))
+# Check the four actual input rows and all numbers in the grouping diagram.
+tiny <- DBI::dbGetQuery(con, "SELECT origin, carrier, flight, dep_delay FROM flights WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550 ORDER BY sched_dep_time, carrier, flight, origin")
+stopifnot(identical(tiny$origin, c("EWR", "LGA", "JFK", "JFK")),
+          identical(tiny$carrier, c("UA", "UA", "AA", "B6")),
+          identical(tiny$flight, c(1545L, 1714L, 1141L, 725L)),
+          identical(tiny$dep_delay, c(2, 4, 2, -1)))
+tiny_groups <- DBI::dbGetQuery(con, "SELECT origin, COUNT(*) AS departures, SUM(dep_delay) AS delay FROM flights WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550 GROUP BY origin ORDER BY origin")
+stopifnot(identical(tiny_groups$origin, c("EWR", "JFK", "LGA")),
+          identical(tiny_groups$departures, c(1L, 2L, 1L)),
+          identical(tiny_groups$delay, c(2, 1, 4)))
+bare <- DBI::dbGetQuery(con, "SELECT origin, COUNT(*) AS departures FROM flights")
+stopifnot(nrow(bare) == 1L, bare$departures == 336776L,
+          bare$origin %in% c("EWR", "JFK", "LGA")) # no promise about which bare value
+stopifnot(inherits(try(DBI::dbGetQuery(con, "SELECT carrier, COUNT(*) FROM flights WHERE COUNT(*) >= 1000 GROUP BY carrier"), silent = TRUE), "try-error"),
+          inherits(try(DBI::dbGetQuery(con, "SELECT carrier, COUNT(*) FROM flights HAVING COUNT(*) >= 1000 GROUP BY carrier"), silent = TRUE), "try-error"))
+july <- DBI::dbGetQuery(con, "SELECT carrier, COUNT(*) AS departures, AVG(dep_delay) AS delay FROM flights WHERE month = 7 GROUP BY carrier HAVING COUNT(*) >= 1000 AND AVG(dep_delay) > 20 ORDER BY carrier")
+# Independently compare the grouped counts and averages with the package data.
+july_source <- subset(source_tables$flights, month == 7)
+july_counts <- table(july_source$carrier)
+july_means <- tapply(july_source$dep_delay, july_source$carrier, mean, na.rm = TRUE)
+expected_carriers <- sort(names(july_counts)[july_counts >= 1000 & july_means > 20])
+stopifnot(identical(july$carrier, expected_carriers),
+          isTRUE(all.equal(july$departures, as.integer(july_counts[july$carrier]))),
+          isTRUE(all.equal(july$delay, as.numeric(july_means[july$carrier]))))
+message("OK: chapter 4 counts, NULL aggregates, diagram, GROUP BY and HAVING")
+
 # Execute every SQL example, including expandable answers and companion solutions.
 files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-advanced.qmd", "joins.qmd",
            "solutions/sql-advanced.md", "solutions/joins.md")
