@@ -523,7 +523,9 @@ on `NULL` will explain missing-value filters in full.
 >   `BETWEEN 60 AND 120`.
 >
 
-## Try it {#exercises}
+<span id="exercises"></span>
+
+## Try it
 
 Attempt each question before opening its answer. We use `LIMIT 5` for
 small previews; these answers display individual flights, not totals.

@@ -25,8 +25,8 @@ dbplyr. R users who know SQL can start at Part II.
 | Appendix | DBI Cheat Sheet | One-page R command reference |
 
 Part I outline slots 3, 5 and 7 are comments only until those chapters are
-written. The new first two chapters include expandable exercise answers.
-Other exercise solutions live in [`solutions/`](solutions/).
+written. The Part I chapters (1, 2, 4 and 6) include expandable exercise
+answers; Part II exercise solutions live in [`solutions/`](solutions/).
 
 Part I SQL chunks use `data/flights.sqlite`, built locally from the CC0
 **nycflights13** package. The generated file is over 20 MB and is ignored by
