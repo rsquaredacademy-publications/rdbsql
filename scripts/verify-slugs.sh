@@ -24,10 +24,10 @@ if [ ! -f "$YAML" ]; then
   exit 1
 fi
 
-# chapters + appendices, .qmd entries only, minus the .qmd extension.
+# Chapters (including nested parts) + appendices, .qmd entries only.
 # `sed` strips the extension because yq's sub()/rtrimstr() do not behave
 # as expected here; verified against yq 4.5x on the runner image.
-slugs=$(yq eval -r '.book.chapters[]?, .book.appendices[]?' "$YAML" \
+slugs=$(yq eval -r '(.book.chapters[]?, .book.appendices[]?) | .. | select(tag == "!!str")' "$YAML" \
         | grep '\.qmd$' \
         | sed 's/\.qmd$//')
 

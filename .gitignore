@@ -7,3 +7,6 @@ daily-logs.md
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Generated from the installed nycflights13 package (over 20 MB).
+/data/flights.sqlite
