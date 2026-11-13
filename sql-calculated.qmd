@@ -1,0 +1,419 @@
+# Calculated columns and SQLite types {#sec-sql-calculated}
+
+```{r sql-calculated-setup, include=FALSE}
+source("scripts/sql-setup.R")
+```
+
+## Introduction
+
+In this chapter, we will learn to:
+
+- calculate a new value for each row
+- name a result column with `AS`
+- control decimal places with `ROUND`
+- recognize integer division and retain fractions with `* 1.0`
+- distinguish SQLite storage classes from column affinity
+- explain why text `'10'` sorts before text `'9'`
+
+We can already select and filter columns. Let us use those columns in
+calculations. We will convert distance to kilometres, compare arrival and
+departure delays, and estimate speed during the time in the air.
+
+Each calculation belongs to one flight row. We will summarize several
+rows together in the next chapter. Keeping that distinction clear helps
+us choose between an ordinary calculation and an aggregate.
+
+## Set Up
+
+The examples use `flights` in `data/flights.sqlite`. See
+[how to follow along](sql-intro.qmd#how-to-follow-along) for the database
+build instructions. Results below each SQL chunk are computed when the
+book renders.
+
+`distance` is in miles, `air_time` is in minutes, and both delay columns
+are in minutes. A positive delay means late; a negative delay means
+early. We will use four early scheduled departures on January 1 so we
+can inspect each calculation beside its inputs.
+
+## Calculate a value for each row
+
+An expression combines values and operators to produce a value. In a
+`SELECT` list, an arithmetic expression runs separately for each selected
+row. Let us convert miles to kilometres using 1.609344 kilometres per mile:
+
+```{sql, connection=con}
+SELECT carrier, flight, distance,
+       distance * 1.609344 AS distance_km
+FROM flights
+WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550
+ORDER BY sched_dep_time, carrier, flight, origin;
+```
+
+The result still has four rows. Each `distance_km` uses the `distance`
+from its own row. We have added a result column without changing the
+stored table. Running the query again starts from the same miles.
+
+The usual arithmetic operators are `+`, `-`, `*` and `/`. Addition and
+subtraction can compare measurements with the same units. For example,
+arrival delay minus departure delay describes how the delay changed:
+
+```{sql, connection=con}
+SELECT carrier, flight, dep_delay, arr_delay,
+       arr_delay - dep_delay AS delay_change_minutes
+FROM flights
+WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550
+ORDER BY sched_dep_time, carrier, flight, origin;
+```
+
+For UA 1545, the delay increased by nine minutes. For B6 725, it fell
+by seventeen minutes. The sign has meaning because we stated the order
+of subtraction. Reversing the operands would reverse that interpretation.
+
+We can also combine operators. Multiplication and division come before
+addition and subtraction. Brackets make the intended grouping explicit:
+
+```{sql, connection=con}
+SELECT 10 + 5 * 2 AS multiply_first,
+       (10 + 5) * 2 AS add_first;
+```
+
+The results are 20 and 30. Whenever a calculation has several steps,
+write the units and intended order in words before writing the expression.
+Brackets are useful even when the default precedence would work.
+
+## Name the result with AS
+
+`AS` introduces an alias, a name for a column in the query result.
+`distance * 1.609344 AS distance_km` puts a readable heading above the
+calculated values. It does not rename `distance` in the database.
+
+Choose short names that describe the measure and its units. Underscores
+keep names such as `delay_change_minutes` together. An unquoted alias
+containing spaces is not one identifier; use underscores in this book.
+
+We can use a result alias to sort the result:
+
+```{sql, connection=con}
+SELECT carrier, flight,
+       arr_delay - dep_delay AS delay_change_minutes
+FROM flights
+WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550
+ORDER BY delay_change_minutes DESC, carrier, flight;
+```
+
+AA 1141 has the largest increase among these four departures. The
+remaining sort columns make ties predictable. The alias gives us a
+readable way to refer to the result in `ORDER BY`.
+
+An alias is not a variable assigned for later expressions in the same
+`SELECT` list. If another expression needs the calculation, repeat the
+expression. For these short calculations, that keeps the inputs visible.
+
+## Round a calculated value
+
+`ROUND(value, digits)` rounds a numeric value to the requested number
+of decimal places. Let us show kilometres to one decimal place:
+
+```{sql, connection=con}
+SELECT carrier, flight, distance,
+       ROUND(distance * 1.609344, 1) AS distance_km
+FROM flights
+WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550
+ORDER BY sched_dep_time, carrier, flight, origin;
+```
+
+Rounding changes the returned number. It does not promise a fixed text
+format with trailing zeros. A table viewer may display a whole result
+without `.0`, even when we requested one decimal place.
+
+We usually round the final calculation, keeping intermediate values
+available at their original precision. To estimate miles per hour,
+divide miles by minutes and multiply by sixty:
+
+```{sql, connection=con}
+SELECT carrier, flight, distance, air_time,
+       ROUND(distance * 60.0 / air_time, 1) AS miles_per_hour
+FROM flights
+WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550
+ORDER BY sched_dep_time, carrier, flight, origin;
+```
+
+UA 1545 gives 370.0 miles per hour, while B6 725 gives 516.7. These
+are distance-to-air-time ratios. They do not measure the speed at every
+moment or include time spent on the ground.
+
+Whenever we calculate a rate, check the denominator's units. Dividing
+miles by minutes alone gives miles per minute. Multiplying by sixty
+converts that rate to miles per hour.
+
+## Filter using a calculation
+
+An expression can also supply a condition in `WHERE`. Let us keep only
+the early departures whose distance-to-air-time ratio exceeds 400 miles
+per hour:
+
+```{sql, connection=con}
+SELECT carrier, flight,
+       ROUND(distance * 60.0 / air_time, 1) AS miles_per_hour
+FROM flights
+WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550
+  AND distance * 60.0 / air_time > 400
+ORDER BY miles_per_hour DESC, carrier, flight;
+```
+
+Two rows qualify. The date and schedule conditions select the same
+starting flights as before; the added condition narrows that selection.
+We repeat the calculation in `WHERE` so the filter states its inputs.
+The result alias remains useful for the final sort.
+
+The condition uses the unrounded rate. Rounding for display and testing
+a threshold answer different questions. A rate just above a boundary
+could print at that boundary after rounding. Decide whether the rule
+concerns the measured value or its rounded representation, then write
+the condition accordingly.
+
+We also keep the units in the alias. A result headed only `speed`
+would leave a reader guessing whether we used minutes or hours.
+Whenever a calculated measure will be shared, its name should make the
+scale clear without requiring another look at the expression.
+
+## Integer division can discard the fraction
+
+SQLite distinguishes integers from real numbers. If both operands of
+division are integers, SQLite uses integer division and discards the
+fractional part toward zero:
+
+```{sql, connection=con}
+SELECT 7 / 2 AS integer_result,
+       -7 / 2 AS negative_result,
+       7 * 1.0 / 2 AS real_result;
+```
+
+The results are 3, -3 and 3.5. Multiplying by `1.0` makes an operand
+real before division. This is a useful habit when a ratio must retain
+fractions and the inputs might be integers.
+
+The placement matters. A later multiplication or rounding cannot
+recover a fraction already discarded:
+
+```{sql, connection=con}
+SELECT (7 / 2) * 1.0 AS too_late,
+       ROUND(7 / 2, 2) AS rounded_integer,
+       ROUND(7 * 1.0 / 2, 2) AS retained_fraction;
+```
+
+The first two values are still three. Use `numerator * 1.0 / denominator`
+when we want real division. A percentage similarly uses a factor such
+as `100.0`; `90%` is not a SQL numeric literal.
+
+Whole-looking values do not necessarily have integer storage. In this
+database, `distance`, `air_time` and `dep_delay` have REAL affinity, while
+`month` and `flight` have INTEGER affinity. We can inspect actual values
+with `typeof` instead of guessing from their printed appearance.
+
+## Storage classes and type affinity
+
+A **storage class** describes an individual SQLite value. SQLite has
+five: `null` for a missing value, `integer` for a whole number, `real`
+for a floating point number, `text` for a string, and `blob` for bytes.
+`typeof(value)` reports that class:
+
+```{sql, connection=con}
+SELECT typeof(NULL) AS missing_class,
+       typeof(7) AS whole_class,
+       typeof(7.0) AS decimal_class,
+       typeof('7') AS quoted_class,
+       typeof(X'37') AS bytes_class;
+```
+
+`X'37'` is a byte literal used only to show the fifth class. Our flight
+calculations use numeric values. Quotes matter: `'7'` is text even
+though its characters look like a number.
+
+A column's **type affinity** is its preference for storing and comparing
+values. The five affinity names are INTEGER, REAL, NUMERIC, TEXT and
+BLOB. INTEGER, REAL and NUMERIC favor numeric values; TEXT favors text;
+BLOB makes no conversion preference.
+
+Affinity and storage class answer different questions. Affinity belongs
+to the column; storage class belongs to the value. In ordinary SQLite
+tables such as ours, affinity guides conversion rather than enforcing
+one storage class for every value. Missing values can remain `NULL`.
+
+Let us inspect some values in an actual flight row:
+
+```{sql, connection=con}
+SELECT typeof(month) AS month_class,
+       typeof(distance) AS distance_class,
+       typeof(dep_delay) AS delay_class,
+       typeof(tailnum) AS tailnum_class
+FROM flights
+WHERE flight_date = '2013-01-01' AND flight = 1545
+ORDER BY origin, carrier
+LIMIT 1;
+```
+
+The first class is `integer`; the next two are `real`; the last is
+`text`. A distance of 1400 can therefore participate in real division.
+Counting decimal digits on the screen would give us the wrong guide.
+
+Affinity can also affect comparisons. Compare a number with quoted
+digits first as literals, then through the numeric `flight` column:
+
+```{sql, connection=con}
+SELECT 1545 = '1545' AS literal_equal,
+       flight = '1545' AS column_equal
+FROM flights
+WHERE flight_date = '2013-01-01' AND flight = 1545
+ORDER BY origin, carrier
+LIMIT 1;
+```
+
+The results are 0 and 1. The literal comparison has no column affinity;
+the integer and text values differ. The column comparison applies its
+numeric affinity to the quoted digits. We should still write numeric
+filters with numbers, such as `flight = 1545`, to express our intent.
+
+## Why text '10' comes before text '9'
+
+Two text literals use text ordering. Under SQLite's default BINARY
+collation, the first differing characters determine this comparison:
+
+```{sql, connection=con}
+SELECT '10' < '9' AS text_comparison,
+       10 < 9 AS numeric_comparison,
+       '10' * 1.0 < '9' * 1.0 AS converted_comparison;
+```
+
+SQLite represents true as 1 and false as 0 here. The first comparison
+is true because the character `1` precedes `9`. The other comparisons
+are false because ten exceeds nine.
+
+The multiplication demonstrates conversion for these valid numeric
+strings. It is not a general way to validate imported data. For example,
+SQLite arithmetic turns nonnumeric text such as `'JFK'` into zero:
+
+```{sql, connection=con}
+SELECT 'JFK' * 1.0 AS unsuitable_conversion;
+```
+
+Keep identifiers as text and measures as numbers. If an imported measure
+sorts strangely, inspect its storage class and how the database was
+built before trusting a numeric calculation. The
+[SQLite type documentation](https://www.sqlite.org/datatype3.html) gives
+the full affinity and comparison rules.
+
+## Common mistakes
+
+> - Expecting `7 / 2` to retain a fraction. Make an operand real first.
+> - Applying `ROUND` after integer division and expecting the lost digits back.
+> - Giving an unquoted alias spaces. Use a name such as `distance_km`.
+> - Reading `90%` as a percentage literal. Write the required arithmetic.
+> - Treating quoted digits and numeric literals as interchangeable.
+> - Converting an airport code to a number because the query accepts it.
+
+<span id="exercises"></span>
+
+## Try it
+
+### Convert distance
+
+Show kilometres to two decimal places for the four early departures
+used above. Name the new column `distance_km`.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT carrier, flight,
+       ROUND(distance * 1.609344, 2) AS distance_km
+FROM flights
+WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550
+ORDER BY sched_dep_time, carrier, flight, origin;
+```
+
+</details>
+
+### Retain a fraction
+
+Calculate seven halves to two decimal places. Why does `ROUND(7 / 2, 2)`
+give a different result?
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT ROUND(7 * 1.0 / 2, 2) AS seven_halves;
+```
+
+Integer division has already discarded the fraction before `ROUND` runs.
+
+</details>
+
+### Reverse a difference
+
+For the same four departures, calculate departure delay minus arrival
+delay. Name it `minutes_recovered` and sort the largest value first.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT carrier, flight,
+       dep_delay - arr_delay AS minutes_recovered
+FROM flights
+WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550
+ORDER BY minutes_recovered DESC, carrier, flight;
+```
+
+A positive value means the arrival delay is smaller than the departure delay.
+
+</details>
+
+### Inspect the operands
+
+Show the storage classes of `7 / 2`, `7 * 1.0 / 2` and `'7'`.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT typeof(7 / 2) AS integer_division_class,
+       typeof(7 * 1.0 / 2) AS real_division_class,
+       typeof('7') AS quoted_class;
+```
+
+</details>
+
+### Explain text order
+
+Predict whether `'20' < '3'` and `20 < 3` are true, then run both.
+
+<details>
+<summary>Answer</summary>
+
+```{sql, connection=con}
+SELECT '20' < '3' AS text_comparison,
+       20 < 3 AS numeric_comparison;
+```
+
+Text ordering compares the initial `2` and `3`. Numeric ordering compares
+twenty with three. The results are 1 and 0.
+
+</details>
+
+## Key points
+
+- Arithmetic expressions in `SELECT` calculate one value per input row.
+- `AS` names the result; `ROUND` rounds its numeric value.
+- Make an operand real before division to retain a fraction.
+- Storage class describes a value; affinity describes a column's preference.
+- Text digits follow text order unless numeric conversion applies.
+
+Next: [Summaries and groups](sql-advanced.qmd).
+
+Practise in [Intro to SQL, lesson 5]({{< var sql_course_url >}}).
+
+```{r sql-calculated-close, include=FALSE}
+DBI::dbDisconnect(con)
+```

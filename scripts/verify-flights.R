@@ -162,8 +162,41 @@ stopifnot(inherits(try(DBI::dbGetQuery(con, "SELECT carrier FROM flights f INNER
 stopifnot(nrow(DBI::dbGetQuery(con, "SELECT f.carrier, a.name FROM flights f INNER JOIN airlines a LIMIT 3")) == 3L)
 message("OK: chapter 6 unique keys, diagram, missing matches, attributes and ON/WHERE")
 
+# Chapter 3: arithmetic, rounding, value classes and column affinity.
+check_query("SELECT -7 / 2", -3L)
+check_query("SELECT (7 / 2) * 1.0", 3)
+check_query("SELECT ROUND(7 / 2, 2)", 3)
+check_query("SELECT ROUND(7 * 1.0 / 2, 2)", 3.5)
+check_query("SELECT 10 + 5 * 2", 20L)
+check_query("SELECT (10 + 5) * 2", 30L)
+check_query("SELECT '10' * 1.0 < '9' * 1.0", 0L)
+check_query("SELECT 'JFK' * 1.0", 0)
+classes <- DBI::dbGetQuery(con, "SELECT typeof(NULL), typeof(7), typeof(7.0), typeof('7'), typeof(X'37')")
+stopifnot(identical(unname(unlist(classes)), c("null", "integer", "real", "text", "blob")))
+schema <- DBI::dbGetQuery(con, "PRAGMA table_info(flights)")
+stopifnot(identical(schema$type[match(c("distance", "air_time", "dep_delay", "month", "flight", "tailnum"), schema$name)],
+                    c("REAL", "REAL", "REAL", "INTEGER", "INTEGER", "TEXT")))
+check_query("SELECT 1545 = '1545'", 0L)
+check_query("SELECT flight = '1545' FROM flights WHERE flight = 1545 LIMIT 1", 1L)
+calculated <- DBI::dbGetQuery(con, "SELECT distance * 1.609344 AS km, arr_delay - dep_delay AS change, ROUND(distance * 60.0 / air_time, 1) AS mph FROM flights WHERE flight_date = '2013-01-01' AND sched_dep_time <= 550 ORDER BY sched_dep_time, carrier, flight, origin")
+stopifnot(isTRUE(all.equal(calculated$km, c(1400, 1416, 1089, 1576) * 1.609344)),
+          identical(calculated$change, c(9, 16, 31, -17)),
+          identical(calculated$mph, c(370, 374.3, 408.4, 516.7)))
+stopifnot(inherits(try(DBI::dbGetQuery(con, "SELECT distance AS distance km FROM flights LIMIT 1"), silent = TRUE), "try-error"),
+          inherits(try(DBI::dbGetQuery(con, "SELECT distance AS miles, miles * 1.609344 FROM flights LIMIT 1"), silent = TRUE), "try-error"),
+          inherits(try(DBI::dbGetQuery(con, "SELECT 90%"), silent = TRUE), "try-error"))
+# Isolate writes used to verify affinity from the book's read-only database.
+affinity_con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbExecute(affinity_con, "CREATE TABLE affinity_probe (i INTEGER, r REAL, n NUMERIC, t TEXT, b BLOB)")
+DBI::dbExecute(affinity_con, "INSERT INTO affinity_probe VALUES ('7', '7', '7', 7, '7'), ('JFK', 'JFK', 'JFK', 'JFK', 'JFK'), (NULL, NULL, NULL, NULL, NULL)")
+affinity <- DBI::dbGetQuery(affinity_con, "SELECT typeof(i), typeof(r), typeof(n), typeof(t), typeof(b) FROM affinity_probe ORDER BY rowid")
+stopifnot(identical(as.character(affinity[1, ]), c("integer", "real", "integer", "text", "text")),
+          all(affinity[2, ] == "text"), all(affinity[3, ] == "null"))
+DBI::dbDisconnect(affinity_con)
+message("OK: chapter 3 row calculations, integer division, classes and affinities")
+
 # Execute every SQL example, including expandable answers and companion solutions.
-files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-advanced.qmd", "joins.qmd",
+files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-calculated.qmd", "sql-advanced.qmd", "joins.qmd",
            "solutions/sql-advanced.md", "solutions/joins.md")
 total <- 0L
 for (file in files) {
