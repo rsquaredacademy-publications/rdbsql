@@ -1,6 +1,107 @@
-# DBI Cheat Sheet {#sec-cheatsheet}
+# SQL and R cheatsheet {#sec-cheatsheet}
 
-One-page reference: connect, query, disconnect. Printable PDF companion to this book (CC BY-NC-SA 4.0).
+Part I SQL reference, followed by the R reference for Part II. The
+[printable DBI cheatsheet](cheatsheet/dbi-cheatsheet.pdf) covers the R
+connection workflow (CC BY-NC-SA 4.0).
+
+```{r cheatsheet-sql-setup, include=FALSE}
+source("scripts/sql-setup.R")
+```
+
+## SQL clause order
+
+Write clauses in the order below. Omit clauses we do not need.
+`DISTINCT`, when used, follows `SELECT` before the selected expressions.
+
+| Clause | Purpose |
+|:--|:--|
+| `SELECT` | Choose columns, expressions and aliases |
+| `FROM` | Choose the source table |
+| `INNER JOIN ... ON` or `LEFT JOIN ... ON` | Match a second table |
+| `WHERE` | Filter individual input rows |
+| `GROUP BY` | Form summary groups |
+| `HAVING` | Filter completed groups |
+| `ORDER BY` | Sort the result, `ASC` by default or `DESC` |
+| `LIMIT` | Cap the number of returned rows |
+
+Let us combine these clauses using the book's flight database:
+
+```{sql, connection=con}
+SELECT f.carrier, a.name, COUNT(*) AS departures,
+       ROUND(AVG(f.dep_delay), 2) AS average_delay
+FROM flights AS f
+INNER JOIN airlines AS a ON f.carrier = a.carrier
+WHERE f.month = 7
+GROUP BY f.carrier, a.name
+HAVING COUNT(*) >= 1000
+ORDER BY departures DESC, f.carrier
+LIMIT 5;
+```
+
+Read the query logically as source and join, row filter, groups, group
+filter, selected results, distinct results if requested, sort and limit.
+The optimizer chooses the physical execution plan. An aggregate condition
+belongs in `HAVING`; a condition on input flights belongs in `WHERE`.
+
+## SQL filters and calculations
+
+Use `=`, `<>`, `<`, `<=`, `>` and `>=` for comparisons. Put text and
+ISO dates in single quotes: `origin = 'JFK'`,
+`flight_date = '2013-07-04'`. Write numeric values without quotes.
+
+`AND` binds before `OR`; brackets state the intended grouping. `NOT`
+negates a condition. `IN ('JFK', 'LGA')` tests listed values;
+`BETWEEN 60 AND 120` includes both endpoints. `LIKE 'Air%'` uses `%`
+for zero or more characters and `_` for one. Default SQLite `LIKE`
+ignores case for ASCII letters.
+
+Arithmetic uses `+`, `-`, `*` and `/`; brackets control grouping.
+`AS` names a result column or table alias. `7 / 2` gives 3 in SQLite;
+`7 * 1.0 / 2` retains 3.5. Make an operand real before division.
+
+| Function or expression | Use |
+|:--|:--|
+| `ROUND(value, digits)` | Round the numeric result |
+| `typeof(value)` | Inspect the SQLite storage class |
+| `COUNT(*)` | Count rows |
+| `COUNT(column)` | Count nonmissing values |
+| `COUNT(DISTINCT column)` | Count distinct nonmissing values |
+| `SUM`, `AVG`, `MIN`, `MAX` | Total, average and extremes |
+| `COALESCE(value, fallback)` | Return the first nonmissing argument |
+| `NULLIF(value, special)` | Return NULL if the arguments compare equal |
+
+`SELECT DISTINCT` removes duplicate selected combinations. `GROUP BY`
+does not guarantee display order. Always add `ORDER BY` when order
+matters, with extra columns to resolve ties.
+
+## SQL NULL and join rules
+
+`NULL` means missing information. Zero, `''` and `'NULL'` are recorded
+values. Use `IS NULL` and `IS NOT NULL`; `= NULL` and `<> NULL` are
+unknown, never true. `WHERE` keeps true conditions only.
+
+With an unknown condition, false `AND` unknown is false, while true
+`OR` unknown is true. True `AND` unknown and false `OR` unknown remain
+unknown. Unknown combined with unknown remains unknown. `NOT` unknown
+also remains unknown.
+
+`SUM`, `AVG`, `MIN` and `MAX` skip NULL inputs and return NULL when
+there are no nonmissing inputs. Counts return zero for no matching
+inputs. `COUNT(*) - COUNT(column)` counts missing values. Zero-filling
+a measure with `COALESCE` changes its meaning and can change its average.
+
+Qualify shared names with table aliases, such as `f.carrier`. An inner
+join keeps matches. A left join keeps every left row and supplies NULL
+for right columns without a match. Test a nonmissing right-hand key
+with `IS NULL` to find missing matches. A right-table condition in
+`WHERE` can remove those rows; place a match requirement in `ON` when
+left rows should survive.
+
+Window functions and CTEs have worked previews in @sec-sql-next.
+
+```{r cheatsheet-sql-close, include=FALSE}
+DBI::dbDisconnect(con)
+```
 
 ## Connect, query, disconnect
 
