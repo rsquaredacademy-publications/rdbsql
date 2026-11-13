@@ -451,6 +451,53 @@ letters. When a text filter surprises us, check the operator, the pattern
 and the stored spelling. See SQLite's
 [expression reference](https://www.sqlite.org/lang_expr.html#like) for its rules.
 
+## Put the clauses together
+
+Let us answer one complete question: “Which five JFK departures in July
+travelled more than 2,000 miles, with the longest distances first?” Start
+with what one result row should represent. We want an individual flight,
+so the source is `flights` and the result should include its identifiers.
+
+```{sql, connection=con}
+SELECT flight_date, carrier, flight, origin, dest, distance
+FROM flights
+WHERE origin = 'JFK'
+  AND flight_date BETWEEN '2013-07-01' AND '2013-07-31'
+  AND distance > 2000
+ORDER BY distance DESC, flight_date, carrier, flight
+LIMIT 5;
+```
+
+The written clause order stays the same even when the question becomes
+longer. Additional conditions belong inside `WHERE`; they do not require
+us to move `SELECT` or `LIMIT`.
+
+| Written order | Meaning when understanding the answer |
+|:--|:--|
+| `SELECT` | Choose the columns to display from qualifying rows |
+| `FROM` | Start with rows from the named table |
+| `WHERE` | Keep rows meeting the conditions |
+| `ORDER BY` | Arrange the result by the requested columns |
+| `LIMIT` | Keep at most the requested number of rows |
+
+To understand this answer, start at `FROM`, apply `WHERE`, then read
+`SELECT`, `ORDER BY` and `LIMIT`. This is a logical reading of the query;
+SQLite can choose its own physical method of finding the result.
+
+Check the answer in the same terms as the question. Every displayed
+origin should be JFK. Every date should fall within July. Every distance
+should exceed 2,000, and the distances should run from largest to smallest.
+Only after these checks should we describe the result in words.
+
+If a result is empty, simplify the filter one condition at a time. First
+check that the airport value exists. Then check the date range, and then
+the distance boundary. An empty result is sometimes the right answer;
+changing several clauses at once makes it harder to see why it occurred.
+
+If a query fails, read the error and inspect the named clause. Check the
+column spelling, commas, quotes and written clause order. Keeping one
+clause per line gives us a small place to start looking.
+
 ## Distinct
 
 For unique values rather than individual flight rows, see `DISTINCT`
