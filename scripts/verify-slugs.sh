@@ -30,12 +30,12 @@ fi
 if command -v yq >/dev/null 2>&1; then
   entries=$(yq eval -r '(.book.chapters[]?, .book.appendices[]?) | .. | select(tag == "!!str")' "$YAML") || exit 1
 elif command -v Rscript >/dev/null 2>&1; then
-  entries=$(Rscript -e 'b <- yaml::read_yaml("_quarto.yml")$book; cat(unlist(b[c("chapters", "appendices")], use.names = FALSE), sep = "\n")') || exit 1
+  entries=$(Rscript -e 'b <- yaml::yaml.load(paste(readLines("_quarto.yml", encoding = "UTF-8"), collapse = "\n"))$book; cat(unlist(b[c("chapters", "appendices")], use.names = FALSE), sep = "\n")') || exit 1
 else
   echo "FAIL: install yq or Rscript with the yaml package"
   exit 1
 fi
-slugs=$(printf '%s\n' "$entries" | grep '\.qmd$' | sed 's/\.qmd$//')
+slugs=$(printf '%s\n' "$entries" | tr -d '\r' | grep '\.qmd$' | sed 's/\.qmd$//')
 
 if [ -z "$slugs" ]; then
   echo "FAIL: no chapters or appendices found in $YAML"
