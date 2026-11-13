@@ -3,7 +3,12 @@
 source("scripts/sql-setup.R")
 check_query <- function(sql, expected) {
   result <- DBI::dbGetQuery(con, sql)[[1]]
-  stopifnot(isTRUE(all.equal(result, expected, check.attributes = FALSE)))
+  if (length(expected) && all(is.na(expected))) {
+    # RSQLite can return an all-NULL column as logical rather than numeric NA.
+    stopifnot(length(result) == length(expected), all(is.na(result)))
+  } else {
+    stopifnot(isTRUE(all.equal(result, expected, check.attributes = FALSE)))
+  }
   message("OK: ", sql)
 }
 
@@ -195,8 +200,52 @@ stopifnot(identical(as.character(affinity[1, ]), c("integer", "real", "integer",
 DBI::dbDisconnect(affinity_con)
 message("OK: chapter 3 row calculations, integer division, classes and affinities")
 
+# Chapter 5: every AND/OR combination, NOT and missing-value transformations.
+logical_values <- c("1", "0", "NULL")
+expected_and <- matrix(c(1, 0, NA, 0, 0, 0, NA, 0, NA), nrow = 3, byrow = TRUE)
+expected_or <- matrix(c(1, 1, 1, 1, 0, NA, 1, NA, NA), nrow = 3, byrow = TRUE)
+for (i in seq_along(logical_values)) {
+  for (j in seq_along(logical_values)) {
+    check_query(paste("SELECT", logical_values[i], "AND", logical_values[j]), expected_and[i, j])
+    check_query(paste("SELECT", logical_values[i], "OR", logical_values[j]), expected_or[i, j])
+  }
+}
+check_query("SELECT NOT 1", 0L)
+check_query("SELECT NOT 0", 1L)
+check_query("SELECT NOT NULL", NA)
+for (expression in c("NULL = NULL", "0 = NULL", "'NULL' = NULL", "1 <> NULL", "NULL + 1", "NULL / 60.0", "10 - NULL", "NULL * 0", "1 / NULL", "1 / 0", "COALESCE(NULL, NULL)", "NULLIF(0, 0)", "NULLIF('', '')")) {
+  check_query(paste("SELECT", expression), NA)
+}
+check_query("SELECT COALESCE(NULL, 0, 5)", 0L)
+check_query("SELECT NULLIF(5, 0)", 5L)
+check_query("SELECT COUNT(*) FROM flights WHERE dep_delay <> NULL", 0L)
+check_query("SELECT COUNT(*) FROM flights WHERE dep_delay IS NOT NULL", 328521L)
+check_query("SELECT COUNT(*) FROM flights WHERE tailnum IS NOT NULL", 334264L)
+check_query("SELECT COUNT(*) FROM flights WHERE dep_delay = 0", 16514L)
+check_query("SELECT COUNT(*) FROM flights WHERE tailnum = ''", 0L)
+check_query("SELECT COUNT(*) FROM flights WHERE tailnum = 'NULL'", 0L)
+check_query("SELECT COUNT(*) FROM flights WHERE NOT (dep_delay > 0)", 200089L)
+check_query("SELECT COUNT(*) FROM flights WHERE dep_delay <= 0 OR dep_delay IS NULL", 208344L)
+check_query("SELECT COUNT(*) FROM flights WHERE dep_delay IS NULL AND tailnum IS NULL", 2512L)
+check_query("SELECT COUNT(*) FROM flights WHERE dep_delay IS NULL OR tailnum IS NULL", 8255L)
+check_query("SELECT ROUND(AVG(COALESCE(dep_delay, 0)), 2) FROM flights", 12.33)
+check_query("SELECT COUNT(NULLIF(tailnum, '')) FROM flights", 334264L)
+check_query("SELECT SUM(dep_delay) * 1.0 / NULLIF(COUNT(dep_delay), 0) FROM flights WHERE dep_delay IS NULL", NA)
+missing_by_origin <- DBI::dbGetQuery(con, "SELECT origin, COUNT(*) - COUNT(dep_delay) AS missing_delays, COUNT(*) - COUNT(tailnum) AS missing_tailnums FROM flights GROUP BY origin ORDER BY origin")
+stopifnot(identical(missing_by_origin$origin, c("EWR", "JFK", "LGA")),
+          identical(missing_by_origin$missing_delays, c(3239L, 1863L, 3153L)),
+          identical(missing_by_origin$missing_tailnums, c(606L, 909L, 997L)))
+paired <- DBI::dbGetQuery(con, "SELECT COUNT(arr_delay - dep_delay) AS known_pairs, COUNT(dep_delay) AS known_departures FROM flights")
+stopifnot(paired$known_pairs == sum(!is.na(source_tables$flights$arr_delay) & !is.na(delay_values)),
+          paired$known_pairs < paired$known_departures)
+# Validate prose counts independently against the installed source package.
+stopifnot(sum(is.na(delay_values)) == 8255L, sum(is.na(flight_keys)) == 2512L,
+          sum(delay_values == 0, na.rm = TRUE) == 16514L,
+          round(mean(replace(delay_values, is.na(delay_values), 0)), 2) == 12.33)
+message("OK: chapter 5 full truth tables, counts, aggregates, COALESCE and NULLIF")
+
 # Execute every SQL example, including expandable answers and companion solutions.
-files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-calculated.qmd", "sql-advanced.qmd", "joins.qmd",
+files <- c("sql-intro.qmd", "sql-basics.qmd", "sql-calculated.qmd", "sql-advanced.qmd", "sql-null.qmd", "joins.qmd",
            "solutions/sql-advanced.md", "solutions/joins.md")
 total <- 0L
 for (file in files) {
