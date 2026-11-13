@@ -1,7 +1,32 @@
-# Solutions — SQL Advanced
+# Solutions — Summaries and groups
 
-1. `SELECT referrer, AVG(n_pages) AS avg_pages FROM ecom GROUP BY referrer ORDER BY avg_pages DESC` — direct (~6.38) tops the list.
+Run against `data/flights.sqlite` after `Rscript scripts/build-db.R`.
+Results are computed when the queries run.
 
-2. `SELECT MAX(duration) FROM ecom WHERE purchase = 1` — 580.
+1. Average departure delay by origin:
 
-3. `SELECT country, COUNT(*) AS visits FROM ecom WHERE device = 'mobile' GROUP BY country ORDER BY visits DESC LIMIT 5` — China (53) is first.
+```sql
+SELECT origin, AVG(dep_delay) AS avg_delay
+FROM flights
+GROUP BY origin
+ORDER BY avg_delay DESC;
+```
+
+2. Longest distance among departures from JFK:
+
+```sql
+SELECT MAX(distance) AS longest_distance
+FROM flights
+WHERE origin = 'JFK';
+```
+
+3. Top five destinations among AA departures:
+
+```sql
+SELECT dest, COUNT(*) AS departures
+FROM flights
+WHERE carrier = 'AA'
+GROUP BY dest
+ORDER BY departures DESC, dest
+LIMIT 5;
+```

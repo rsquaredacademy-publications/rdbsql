@@ -12,5 +12,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf typst-x86_64-unknown-linux-musl* \
     && rm -rf /var/lib/apt/lists/*
 
-RUN R -e 'install.packages(c("DBI", "RSQLite", "dbplyr", "knitr", "rmarkdown", "readr", "dplyr"), repos = "https://packagemanager.posit.co/cran/__linux__/jammy/latest")'
+RUN R -e 'install.packages(c("DBI", "RSQLite", "dbplyr", "knitr", "rmarkdown", "readr", "dplyr", "nycflights13"), repos = "https://packagemanager.posit.co/cran/__linux__/jammy/latest")'
 # NOTE: duckdb omitted — the book's only duckdb chunk is eval=FALSE (same as CI).

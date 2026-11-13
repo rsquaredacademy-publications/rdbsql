@@ -1,11 +1,7 @@
-# JOINs {#sec-joins}
+# Joining two tables {#sec-joins}
 
-```{r join-libs, echo=FALSE, message=FALSE}
-library(dplyr)
-library(DBI)
-library(RSQLite)
-library(dbplyr)
-knitr::opts_chunk$set(R.options=list(max.print=50))
+```{r join-setup, include=FALSE}
+source("scripts/sql-setup.R")
 ```
 
 ## Introduction
@@ -14,114 +10,120 @@ In this chapter, we will learn to:
 
 - combine rows from two tables with `INNER JOIN`
 - keep unmatched rows with `LEFT JOIN`
-- avoid the SQLite `RIGHT` / `FULL OUTER JOIN` trap
+- check SQLite's support for `RIGHT` and `FULL OUTER JOIN`
 
-We will use the following R packages:
-
-- [DBI](https://dbi.r-dbi.org/)
-- [RSQLite](https://rsqlite.r-dbi.org/)
-- [dbplyr](http://dbplyr.tidyverse.org/)
-
-All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be run from `code/ch5-joins.R` in this repo.
+We use the flight database introduced in @sec-sql-intro. For joins with
+R verbs, see [JOINs with dbplyr](dbplyr.qmd#joins-with-dbplyr) in Part II.
 
 ## Set Up
 
-So far we have worked with a single table. Real databases keep related data in
-separate tables. Our `data/ecom.sqlite` file holds two small related tables
-besides `ecom`:
+Related tables share columns that let us match their rows:
 
-- `customers`: 20 rows, one per customer (`customer_id` primary key, `country`)
-- `orders`: 20 rows, one per order (`order_id` primary key, `customer_id`
-  foreign key into `customers`, `amount`)
+- `flights` records scheduled departures; many rows have the same `carrier`.
+- `airlines` has one row per carrier code and supplies its full `name`.
+- `planes` has one row per aircraft `tailnum` and supplies its `model`.
 
-Six customers (4, 16--20) have placed no orders, and one order points at a
-`customer_id` (99) that does not exist. These deliberate mismatches make the
-difference between join types visible.
+Not every flight has a matching aircraft record. Some tail numbers are
+missing, and some recorded tail numbers are absent from `planes`. These
+gaps make the difference between inner and left joins visible.
 
-Let us connect directly to the SQLite file:
-
-```{r join-setup, message=FALSE}
-con <- DBI::dbConnect(RSQLite::SQLite(), "data/ecom.sqlite")
-```
-
-A quick look at both tables:
+Let us preview the airline and aircraft tables:
 
 ```{sql, connection=con}
-SELECT * FROM customers LIMIT 5
+SELECT carrier, name FROM airlines ORDER BY carrier LIMIT 5;
 ```
 
 ```{sql, connection=con}
-SELECT * FROM orders LIMIT 5
+SELECT tailnum, manufacturer, model FROM planes ORDER BY tailnum LIMIT 5;
 ```
 
 ## INNER JOIN
 
-`INNER JOIN` returns only the rows that match in **both** tables. Customers
-without orders, and orders without customers, are dropped.
+`INNER JOIN` returns matching rows from both tables. We match each
+flight's carrier code to its airline. The short names `f` and `a` are
+table aliases. Prefixing a column with its alias identifies its table:
 
 ```{sql, connection=con}
-SELECT c.customer_id, c.country, o.order_id, o.amount
-FROM customers c
-INNER JOIN orders o ON c.customer_id = o.customer_id
-ORDER BY c.customer_id, o.order_id
-LIMIT 6
+SELECT f.flight_date, f.flight, f.carrier, a.name, f.origin, f.dest
+FROM flights f
+INNER JOIN airlines a ON f.carrier = a.carrier
+ORDER BY f.flight_date, f.sched_dep_time, f.carrier, f.flight, f.origin
+LIMIT 6;
 ```
 
-How many of the 20 orders survive? Nineteen -- order 120 belongs to the
-non-existent customer 99 and is excluded:
+Each carrier code occurs once in `airlines`, so each matching flight
+receives one airline name. Let us count the matched departures:
 
 ```{sql, connection=con}
-SELECT COUNT(*) AS n FROM customers c
-INNER JOIN orders o ON c.customer_id = o.customer_id
+SELECT COUNT(*) AS matched_flights
+FROM flights f
+INNER JOIN airlines a ON f.carrier = a.carrier;
 ```
+
+Every flight in this data has an airline match. With another right-hand
+table, an inner join could exclude flights that lack a matching record.
 
 ## LEFT JOIN
 
-`LEFT JOIN` keeps **every** row from the left table and fills `NULL` where the
-right table has no match. This is how you find customers who never ordered:
+`LEFT JOIN` keeps every row of the left table and supplies `NULL` for
+right-hand columns where there is no match. Let us find flights without
+a matching aircraft record:
 
 ```{sql, connection=con}
-SELECT c.customer_id, c.country, o.order_id, o.amount
-FROM customers c
-LEFT JOIN orders o ON c.customer_id = o.customer_id
-WHERE o.order_id IS NULL
-ORDER BY c.customer_id
+SELECT f.flight_date, f.carrier, f.flight, f.tailnum, p.model
+FROM flights f
+LEFT JOIN planes p ON f.tailnum = p.tailnum
+WHERE p.tailnum IS NULL
+ORDER BY f.flight_date, f.sched_dep_time, f.carrier, f.flight, f.origin
+LIMIT 6;
 ```
 
-The full left join has 25 rows: 19 matched order rows plus one `NULL` row for
-each of the 6 customers without orders.
+We test the right table's key, `p.tailnum`, to find an absent match.
+Testing `p.model` instead would also include matching aircraft whose
+model value happened to be missing. The displayed missing values come
+from the join and may print as `NA` in the rendered table.
 
-## The SQLite RIGHT / FULL Trap
+Because each tail number occurs once in `planes`, this left join keeps
+one result row per flight. We can count the rows with no aircraft match:
 
-Some tutorials teach `RIGHT JOIN` or `FULL OUTER JOIN`. Do not use them with
-RSQLite: the SQLite versions bundled with RSQLite (including recent ones)
-reject both with a syntax error such as `near "RIGHT": syntax error`.
-Postgres and other production databases accept them, so queries written
-against SQLite will fail silently only when you move them.
+```{sql, connection=con}
+SELECT COUNT(*) AS flights_without_plane_record
+FROM flights f
+LEFT JOIN planes p ON f.tailnum = p.tailnum
+WHERE p.tailnum IS NULL;
+```
 
-The portable workaround is to swap the tables and use `LEFT JOIN`:
+## SQLite RIGHT / FULL support {#the-sqlite-right-full-trap}
 
-- instead of `A RIGHT JOIN B`, write `B LEFT JOIN A`
-- instead of `A FULL OUTER JOIN B`, union a `LEFT JOIN` in each direction
+SQLite supports `RIGHT JOIN` and `FULL OUTER JOIN` starting with version
+3.39.0. Both were checked with the RSQLite build used for this job.
+Older SQLite versions reject them; check your own connection's version:
 
-When in doubt, `LEFT JOIN` is the only outer join you need for this book.
+```{sql, connection=con}
+SELECT sqlite_version() AS sqlite_version;
+```
+
+We use `LEFT JOIN` for the examples above. To express a right join with
+that clause, swap the table order and keep the same matching condition.
 
 ## JOINs with dbplyr
 
-For joins with R verbs, see [JOINs with dbplyr](dbplyr.qmd#joins-with-dbplyr)
-and [semi_join and anti_join](dbplyr.qmd#semi_join-and-anti_join) in Part II.
+For the R equivalents, see [JOINs with dbplyr](dbplyr.qmd#joins-with-dbplyr).
 
-```{r join-close}
-dbDisconnect(con)
+## semi_join and anti_join
+
+For filtering joins with R verbs, see
+[semi_join and anti_join](dbplyr.qmd#semi_join-and-anti_join) in Part II.
+
+```{r join-close, include=FALSE}
+DBI::dbDisconnect(con)
 ```
 
 ## Exercises
 
-1. List the `customer_id` and `country` of customers who placed no orders.
-   Write a `LEFT JOIN ... IS NULL` query; for the R version, see
-   [filtering joins in Part II](dbplyr.qmd#semi_join-and-anti_join).
-2. Compute total order `amount` per customer (highest first) with an
-   `INNER JOIN` + `GROUP BY`. Which customer spent the most?
-3. Find the orphan order: which `order_id` points at a non-existent customer?
+1. Show six flights with their airline names, sorted by date, scheduled
+   departure time, carrier, flight number and origin.
+2. Count departures per airline name using `INNER JOIN` and `GROUP BY`.
+3. Find six flights without a matching aircraft record, using `LEFT JOIN`.
 
 Worked solutions in `solutions/joins.md` (attempt first).

@@ -1,168 +1,161 @@
-# SQL Advanced {#sec-sql2}
+# Summaries and groups {#sec-sql2}
+
+```{r sql-advanced-setup, include=FALSE}
+source("scripts/sql-setup.R")
+```
 
 ## Introduction
 
-In this chapter, we will learn to
-
-- aggregate data
-- order data
-- and group data
-
-We will use the following R packages:
-
-- [DBI](https://dbi.r-dbi.org/)
-- [RSQLite](https://rsqlite.r-dbi.org/)
-- [dbplyr](http://dbplyr.tidyverse.org/)
-
-```{r lite1aab, echo=FALSE, eval=TRUE, results='hide', message=FALSE}
-library(dbplyr)
-library(DBI)
-library(RSQLite)
-```
-
-All the data sets used in this chapter can be found [here](https://github.com/rsquaredacademy/datasets) and code can be downloaded from [here](https://gist.github.com/aravindhebbali/691dba8e13873c648bfdb91aba65d4d7) or run from `code/ch4-sqladvanced.R` in this repo.
+In this chapter, we will learn to aggregate, order and group data.
+We use the flight database from @sec-sql-intro. Each row of `flights`
+describes one scheduled departure. Departure delays are in minutes;
+distances are in miles.
 
 ## Set Up
 
-In order to be able to use the `ecom` data set for our case study, we will read 
-it using the **readr** package and then copy it to an in memory database using the 
-`copy_to()` function from **dplyr**.
+Open `data/flights.sqlite` to run these queries locally. The hidden
+render setup builds that file when needed and connects to it directly.
 
-```{r setup2, message=FALSE}
-# Canonical ecom: 1000 rows x 8 cols (referrer, device, bouncers, n_visit,
-# n_pages, duration, country, purchase), from the local data/web.csv snapshot.
-web_path <- if (file.exists("data/web.csv")) "data/web.csv" else "https://raw.githubusercontent.com/rsquaredacademy/datasets/master/web.csv"
-ecom <- readr::read_csv(web_path, show_col_types = FALSE)
-ecom <- dplyr::select(ecom, referrer, device, bouncers, n_visit, n_pages, duration, country, purchase)
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-dplyr::copy_to(con, ecom)
-```
-
-## Aggregate 
+## Aggregate
 
 Let us combine the aggregate statements with WHERE statement to filter data.
 
 - SUM()  : returns the total sum of a numeric column
 
 ```{sql, connection=con}
-SELECT SUM(n_visit) FROM ecom
+SELECT SUM(dep_delay) FROM flights
 ```
 
 ```{sql, connection=con}
-SELECT SUM(n_visit) 
-FROM ecom 
-WHERE n_visit > 5
+SELECT SUM(dep_delay)
+FROM flights
+WHERE dep_delay > 5
 ```
 
 - AVG()  : returns the average value of a numeric column
 
 ```{sql, connection=con}
-SELECT AVG(n_visit) FROM ecom
+SELECT AVG(dep_delay) FROM flights
 ```
 
 ```{sql, connection=con}
-SELECT AVG(n_visit) 
-FROM ecom 
-WHERE country LIKE 'P%'
+SELECT AVG(dep_delay)
+FROM flights
+WHERE origin = 'JFK'
 ```
 
 - MAX()  : returns the largest value of the selected column
 
 ```{sql, connection=con}
-SELECT MAX(n_visit) FROM ecom
+SELECT MAX(dep_delay) FROM flights
 ```
 
 ```{sql, connection=con}
-SELECT MAX(n_visit) 
-FROM ecom 
-WHERE device = 'tablet'
+SELECT MAX(dep_delay)
+FROM flights
+WHERE carrier = 'DL'
 ```
 
 - MIN()  : returns the smallest value of the selected column
 
 ```{sql, connection=con}
-SELECT MIN(n_visit) FROM ecom
+SELECT MIN(dep_delay) FROM flights
 ```
 
 ```{sql, connection=con}
-SELECT MIN(n_visit) 
-FROM ecom 
-WHERE duration BETWEEN 600 AND 900
+SELECT MIN(dep_delay)
+FROM flights
+WHERE distance BETWEEN 600 AND 900
 ```
 
-## Alias 
+### Distinct values
+
+`DISTINCT` returns unique values. We can list origins or count distinct
+carriers without counting each flight as a different airline:
+
+```{sql, connection=con}
+SELECT DISTINCT origin FROM flights ORDER BY origin;
+```
+
+```{sql, connection=con}
+SELECT COUNT(DISTINCT carrier) AS carriers FROM flights;
+```
+
+## Alias
 
 SQL aliases are used to give a table, or a column in a table, a temporary name. They are often used to make column names more readable. An alias only exists for the duration of the query. Below are a
 few examples:
 
 ```{sql, connection=con}
-SELECT AVG(n_visit) AS avg_mobile 
-FROM ecom 
-WHERE device = 'mobile'
+SELECT AVG(dep_delay) AS avg_aa
+FROM flights
+WHERE carrier = 'AA'
 ```
 
 ```{sql, connection=con}
-SELECT MAX(n_visit) AS max_visit 
-FROM ecom
+SELECT MAX(dep_delay) AS max_delay
+FROM flights
 ```
 
 ```{sql, connection=con}
-SELECT MIN(duration) AS min_duration 
-FROM ecom
+SELECT MIN(distance) AS min_distance
+FROM flights
 ```
 
 ## Order By
 
-The ORDER BY keyword is used to sort the records in ascending or descending order. By default, the records are sorted in ascending order. Use the DESC keyword if you want to sort the records in descending order, 
+The ORDER BY keyword is used to sort the records in ascending or descending order. By default, the records are sorted in ascending order. Use the DESC keyword if you want to sort the records in descending order,
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-ORDER BY country
+SELECT flight_date, carrier, flight, origin, distance, dep_delay
+FROM flights
+ORDER BY origin, flight_date, carrier, flight
+LIMIT 5
 ```
 
 ```{sql, connection=con}
-SELECT *  
-FROM ecom 
-ORDER BY duration
+SELECT flight_date, carrier, flight, origin, distance, dep_delay
+FROM flights
+ORDER BY distance, flight_date, carrier, flight, origin
+LIMIT 5
 ```
 
 ```{sql, connection=con}
-SELECT * 
-FROM ecom 
-ORDER BY n_visit DESC
+SELECT flight_date, carrier, flight, origin, distance, dep_delay
+FROM flights
+ORDER BY dep_delay DESC, flight_date, carrier, flight, origin
+LIMIT 5
 ```
 
-## Group By 
+## Group By
 
 The GROUP BY statement is used with aggregate functions (COUNT, MAX, MIN, SUM, AVG) to group the result by one or more columns.
 
 ```{sql, connection=con}
-SELECT device, 
-count(*) AS visits 
-FROM ecom 
-GROUP BY device 
-ORDER by visits DESC
+SELECT carrier,
+count(*) AS departures
+FROM flights
+GROUP BY carrier
+ORDER BY departures DESC
 ```
 
 ```{sql, connection=con}
-SELECT device, MAX(duration) AS max_duration 
-FROM ecom 
-GROUP BY device 
-ORDER by max_duration DESC
+SELECT carrier, MAX(distance) AS max_distance
+FROM flights
+GROUP BY carrier
+ORDER by max_distance DESC
 ```
 
-```{r lite-close}
-dbDisconnect(con)
+```{r sql-advanced-close, include=FALSE}
+DBI::dbDisconnect(con)
 ```
 
 ## Exercises
 
-1. Compute the average pages per visit (`AVG(n_pages)`) for each `referrer`,
-   ordered highest average first. Which referrer tops the list?
-2. What is the longest `duration` among visits that made a purchase
-   (`purchase = 1`)?
-3. Among `mobile` visits only, count visits by `country` and show the top 5.
-   Which country is first?
+1. Compute the average departure delay (`AVG(dep_delay)`) for each `origin`,
+   ordered highest average first. Which origin tops the list?
+2. What is the longest `distance` among departures from JFK?
+3. Among AA flights only, count departures by `dest` and show the top 5.
+   Which destination is first?
 
 Worked solutions in `solutions/sql-advanced.md` (attempt first).

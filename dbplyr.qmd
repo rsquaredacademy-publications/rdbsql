@@ -101,7 +101,9 @@ dplyr::collect(avg_time)
 ```
 
 We can also combine tables with R verbs, as in the SQL joins in @sec-joins.
-For the examples below, let us load the same customers and orders into this connection:
+The examples below use a separate customer and order dataset from
+`data/ecom.sqlite`: 20 customers and 20 orders, including six customers
+with no orders. Let us load those tables into this connection:
 
 ```{r dbplyr-join-setup, include=FALSE}
 join_source <- DBI::dbConnect(RSQLite::SQLite(), "data/ecom.sqlite")

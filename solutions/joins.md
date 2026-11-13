@@ -1,7 +1,36 @@
-# Solutions — JOINs
+# Solutions — Joining two tables
 
-1. `SELECT c.customer_id, c.country FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id WHERE o.order_id IS NULL` — customers 4, 16, 17, 18, 19, 20. Same result: `anti_join(customers, orders, by = "customer_id")`.
+Run against `data/flights.sqlite` after `Rscript scripts/build-db.R`.
+For the customer and order examples with R verbs, see `dbplyr.qmd`.
 
-2. `SELECT c.customer_id, c.country, SUM(o.amount) AS total FROM customers c INNER JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.country ORDER BY total DESC` — customer 3 (Germany, 1015.82).
+1. Six departures with airline names:
 
-3. `SELECT o.order_id, o.customer_id FROM orders o LEFT JOIN customers c ON o.customer_id = c.customer_id WHERE c.customer_id IS NULL` — order 120 (customer 99).
+```sql
+SELECT f.flight_date, f.sched_dep_time, f.carrier, f.flight,
+       f.origin, f.dest, a.name
+FROM flights f
+INNER JOIN airlines a ON f.carrier = a.carrier
+ORDER BY f.flight_date, f.sched_dep_time, f.carrier, f.flight, f.origin
+LIMIT 6;
+```
+
+2. Departures per airline name:
+
+```sql
+SELECT a.name, COUNT(*) AS departures
+FROM flights f
+INNER JOIN airlines a ON f.carrier = a.carrier
+GROUP BY a.name
+ORDER BY departures DESC, a.name;
+```
+
+3. Six departures with no aircraft match:
+
+```sql
+SELECT f.flight_date, f.carrier, f.flight, f.origin, f.tailnum
+FROM flights f
+LEFT JOIN planes p ON f.tailnum = p.tailnum
+WHERE p.tailnum IS NULL
+ORDER BY f.flight_date, f.sched_dep_time, f.carrier, f.flight, f.origin
+LIMIT 6;
+```
